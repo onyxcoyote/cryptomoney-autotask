@@ -1,0 +1,2 @@
+LGPL3.0
+see COPYING and COPYING.LESSER for text of the license(s)
