@@ -19,9 +19,10 @@ package cryptomoney.autotask;
 import cryptomoney.autotask.exchangeaccount.ExchangeAccount;
 import cryptomoney.autotask.rule.ActionType;
 import cryptomoney.autotask.rule.Rule;
-import cryptomoney.autotask.rule.RuleAction;
-import cryptomoney.autotask.rule.RuleAllowance;
+import cryptomoney.autotask.rule.RuleAction_BuyBTCDCAPostOnly;
+import cryptomoney.autotask.rule.RuleAllowance_WithdrawBTCToCoinbase;
 import cryptomoney.autotask.rule.RuleType;
+import cryptomoney.autotask.rule.*;
 import com.coinbase.exchange.api.orders.OrderService;
 import com.coinbase.exchange.api.exchange.GdaxExchangeImpl;
 import com.coinbase.exchange.api.exchange.Signature;
@@ -61,6 +62,7 @@ public class Autotask
     
     
     public ArrayList<Rule> rules = new ArrayList<>();
+    public ArrayList<Rule> availableRules = new ArrayList<>();
     
     //public static int iterationIntervalMS = 1000*60*5; //5 minutes
     
@@ -104,6 +106,7 @@ public class Autotask
     
     private void Initialize()
     {
+        LoadRuleHelp();
         LoadAccounts();
         LoadRules();
 
@@ -119,36 +122,23 @@ public class Autotask
     }
     
         
+    private void LoadRuleHelp()
+    {
+        availableRules.add(new RuleAction_BuyBTCDCAPostOnly());
+        availableRules.add(new RuleAction_DepositUSD());
+        availableRules.add(new RuleAction_WithdrawBTCToCoinbase());
+        
+        availableRules.add(new RuleAllowance_BuyBTC());
+        availableRules.add(new RuleAllowance_DepositUSD());
+        availableRules.add(new RuleAllowance_WithdrawBTCToCoinbase());
+        
+        when adding a new rule in LoadRules, do it through a method, verify it matches one of these rules in ruletype and name, etc.
+        
+    }
+    
     private void LoadAccounts()
     {
-        /*
-            for each accuont load API key, description, etc.
-        
-        */
-        
-        //todo: un hard code
-        
-        /*      
-        String publicKey = "";
-        String passphrase = "";
-        String baseUrl = "";
-        String secretKey = "";
-        Signature sig = new Signature(secretKey);
-        RestTemplate restTemplate = new RestTemplate();
-        
-        gdax = new GdaxExchangeImpl(
-                            publicKey, 
-                            passphrase, 
-                            baseUrl,
-                            sig,
-                            restTemplate);
-        */
-        
-        
-        
         //accounts.put(1, account1); //account #1
-        
-        
     }
     
     private void LoadRules()
@@ -158,13 +148,19 @@ public class Autotask
         //ALLOWANCE RULES
         //account 1 - ALLOWANCE  buy_bitcoin $21/day (divided per hour)
         double ALLOWANCE_USD_AMOUNT_PER_DAY = 16000.00; //TODO: test
-        RuleAllowance allowance1 = new RuleAllowance(RuleType.ALLOWANCE, ActionType.ALLOWANCE_BUY_BTC_POSTONLY, ALLOWANCE_USD_AMOUNT_PER_DAY); 
+        RuleAllowance_BuyBTC allowance1 = new RuleAllowance_BuyBTC(ALLOWANCE_USD_AMOUNT_PER_DAY); 
         rules.add(allowance1);
-        /*
-            TO ADD
-            -account 1 - ALLOWANCE  coinbase_pro_to_coinbase $20/day (divided per hour)
-            -account 1 - ALLOWANCE  deposit USD $22/day (divided per hour)
-        */
+        
+        //account 1 - ALLOWANCE  coinbase_pro_to_coinbase $20/day (divided per hour)
+        double ALLOWANCE_BTC_TO_COINBASE_PER_DAY = 20.50;
+        RuleAllowance_WithdrawBTCToCoinbase allowance2 = new RuleAllowance_WithdrawBTCToCoinbase(ALLOWANCE_BTC_TO_COINBASE_PER_DAY);
+        rules.add(allowance2);
+        
+        //account 1 - ALLOWANCE  deposit USD $22/day (divided per hour)
+        double ALLOWANCE_DEPOSIT_USD_PER_DAY = 22.00;
+        RuleAllowance_DepositUSD allowance3 = new RuleAllowance_DepositUSD(ALLOWANCE_DEPOSIT_USD_PER_DAY);
+        rules.add(allowance3);
+
         
         
         //ALARM RULES
@@ -174,23 +170,45 @@ public class Autotask
             -account 1 - ALARM if transfer_btc_coinbase_pro_to_coinbase_allowance > $20 and BTC balance < $21->bitcoin
             -account 1 - ALARM if coinbase_btc_balance <  $50->BTC, max once per day?
         */
+        //todo:
         
         
         
         //ACTION RULES
         //account 1 - ACTION buy (w/ BUYMETHOD) around X bitcoin per day using USD, threshold 0.001 bitcoin, max .005 bitcoin, Do 25% of the time (randomness)
-        double BUY_USD_AMOUNT_PER_DAY = 21.00;
+        //todo: add max single purchase? 
+        double BUY_USD_AMOUNT_PER_DAY_USD = 21.00;
         double COINBASE_PRO_MINIMUM_BTC_TRADE_THRESHOLD = 0.001;
+        double MAXIMUM_BTC_AMOUNT_TO_PURCHASE = 0.01;
         double PERCENT_OF_TIME_TO_DO_ACTION_WHEN_TRIGGERED = 0.25; //allows some randomness so it doesn't always happen
-        RuleAction action1 = new RuleAction(RuleType.ACTION, ActionType.ACTION_BUY_BTC_DCA, BUY_USD_AMOUNT_PER_DAY, COINBASE_PRO_MINIMUM_BTC_TRADE_THRESHOLD, PERCENT_OF_TIME_TO_DO_ACTION_WHEN_TRIGGERED);
+        RuleAction_BuyBTCDCAPostOnly action1 = new RuleAction_BuyBTCDCAPostOnly(
+                BUY_USD_AMOUNT_PER_DAY_USD, 
+                COINBASE_PRO_MINIMUM_BTC_TRADE_THRESHOLD, 
+                MAXIMUM_BTC_AMOUNT_TO_PURCHASE,
+                PERCENT_OF_TIME_TO_DO_ACTION_WHEN_TRIGGERED);
         rules.add(action1);
+
+        //account 1 - ACTION withdraw X bitcoin (from coinbase pro) to coinbase account, threshold $20->bitcoin, max $100->bitcoin    
+        double TRANSFER_TO_COINBASE_PER_DAY_USD = 20.00;
+        double MINIMUM_AMOUNT_TO_TRANSFER = 20.00;
+        double MAXIMUM_AMOUNT_TO_TRANSFER = 50.00;
+        RuleAction_WithdrawBTCToCoinbase action2 = new RuleAction_WithdrawBTCToCoinbase(
+                TRANSFER_TO_COINBASE_PER_DAY_USD,
+                MINIMUM_AMOUNT_TO_TRANSFER,
+                MAXIMUM_AMOUNT_TO_TRANSFER);
+        rules.add(action2);
+
+        //account 1 - ACTION transfer X USD from bank 1, threshold >= $50, max $100
+        double DEPOSIT_USD_PER_DAY = 22.00;
+        double MINIMUM_AMOUNT_TO_TRANSFER = 50.00;
+        double MAXIMUM_AMOUNT_TO_TRANSFER = 100.00;
+        RuleAction_DepositUSD action3 = new RuleAction_DepositUSD(
+                DEPOSIT_USD_PER_DAY, 
+                MINIMUM_AMOUNT_TO_TRANSFER, 
+                MAXIMUM_AMOUNT_TO_TRANSFER);
+        rules.add(action2);
         
-        /*
-            TO ADD
-            
-            -account 1 - ACTION withdraw X bitcoin (from coinbase pro) to coinbase account, threshold $20->bitcoin, max $100->bitcoin    
-            -account 1 - ACTION transfer X USD from bank 1, threshold >= $50, max $100
-        */
+        todo: very all rules against a set of rules
         
         
     }

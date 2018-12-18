@@ -44,6 +44,8 @@ public class ExchangeAccount
     public ExchangeType exchangeType = ExchangeType.CoinbasePro;
     
     private double allowanceBuyBTCinUSD = 0;
+    private double allowanceWithdrawBTCToCoinbaseInUSD = 0;
+    private double allowanceDepositUSD = 0;
     
     private HashMap<String, Order> orders = new HashMap<>();
     
@@ -52,9 +54,12 @@ public class ExchangeAccount
     {
     }
     
-    public void addAllowanceBuyBTCinUSD(double _inc)
+    /**
+     * @param _amountToIncrementUSD 
+     */
+    public void addAllowanceBuyBTCinUSD(double _amountToIncrementUSD)
     {
-        allowanceBuyBTCinUSD+=_inc;
+        allowanceBuyBTCinUSD += _amountToIncrementUSD;
     }
 
     /**
@@ -65,7 +70,43 @@ public class ExchangeAccount
         return allowanceBuyBTCinUSD;
     }
     
+    /**
+     * @return the allowanceWithdrawBTCToCoinbaseInUSD
+     */
+    public double getAllowanceWithdrawBTCToCoinbaseInUSD()
+    {
+        return allowanceWithdrawBTCToCoinbaseInUSD;
+    }
+
+    /**
+     * @param _amountToIncrementUSD 
+     */
+    public void addAllowanceWithdrawBTCToCoinbaseInUSD(double _amountToIncrementUSD)
+    {
+        this.allowanceWithdrawBTCToCoinbaseInUSD += _amountToIncrementUSD;
+    }
     
+    
+    
+    /**
+     * @return the allowanceDepositUSD
+     */
+    public double getAllowanceDepositUSD()
+    {
+        return allowanceDepositUSD;
+    }
+
+    /**
+     * @param _amountToIncrementUSD 
+     */
+    public void addAllowanceDepositUSD(double _amountToIncrementUSD)
+    {
+        this.allowanceDepositUSD += _amountToIncrementUSD;
+    }
+
+    
+    //todo: move this elsewhere
+    //todo: need to test successful fills
     /**
      * CALLS API
      */
@@ -154,7 +195,8 @@ public class ExchangeAccount
                     lsoc.library.utilities.Sleep.Sleep(100); //slow down so we're not querying too fast. this limits it to 10x/second
 
                     CryptomoneyAutotask.logProv.LogMessage("submitting cancel for " + orderToCancel.getId());
-                    CryptomoneyAutotask.app.orderService().cancelOrder(orderToCancel.getId());
+                    String response = CryptomoneyAutotask.app.orderService().cancelOrder(orderToCancel.getId());
+                    CryptomoneyAutotask.logProv.LogMessage("cancel response: " + response);
                     //orders.remove(orderToCancel.getId()); //wait until later to verify it's been cancelled ? Or mark it as something we're cancelling?
                     ordersNotOpen.add(orderToCancel); //assume the cancel was complete
                 }
@@ -305,7 +347,8 @@ public class ExchangeAccount
             System.exit(1);
         }
     }
-    
+
+
 
 
 }

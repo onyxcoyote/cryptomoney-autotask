@@ -38,6 +38,9 @@ import java.text.DecimalFormat;
 import java.util.List;
 import com.coinbase.exchange.api.exchange.GdaxExchangeImpl;
 import com.coinbase.exchange.api.orders.OrderService;
+import com.coinbase.exchange.api.deposits.DepositService;
+import com.coinbase.exchange.api.withdrawals.WithdrawalsService;
+import com.coinbase.exchange.api.payments.PaymentService;
 import com.coinbase.exchange.api.exchange.GdaxExchangeImpl;
 import com.coinbase.exchange.api.config.GdaxConfiguration;
 
@@ -51,8 +54,10 @@ public class CryptomoneyAutotask
     public static Autotask app;
     public static GdaxExchangeImpl exchange;
     public static OrderService orderService;// = new OrderService(exchange);
-    
-
+    public static AccountService accountService;
+    public static WithdrawalsService withdrawalsService;
+    public static PaymentService paymentService;
+    public static DepositService depositService;
     
     public static ILoggingProvider logProv = new LoggingProviderSimple();
     public static int iterationIntervalMS = 1000*5;
@@ -84,6 +89,10 @@ public class CryptomoneyAutotask
         exchange = new GdaxExchangeImpl(args[0], args[2], args[3], sig);
         
         orderService = new OrderService(exchange);
+        accountService = new AccountService(exchange);
+        withdrawalsService = new WithdrawalsService(exchange);
+        paymentService = new PaymentService(exchange);
+        depositService = new DepositService(exchange);
         
         app = new Autotask();
         app.Run();

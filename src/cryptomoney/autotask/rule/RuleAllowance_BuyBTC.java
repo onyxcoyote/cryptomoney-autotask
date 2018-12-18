@@ -22,38 +22,38 @@ import cryptomoney.autotask.CryptomoneyAutotask;
  *
  * @author onyxcoyote <no-reply@onyxcoyote.com>
  */
-public class RuleAllowance extends Rule
+public class RuleAllowance_BuyBTC extends Rule
 {
     private double amountPerDayUSD;
     
-    public RuleAllowance(RuleType _ruleType, ActionType _actionType, double _amountPerDayUSD)
+    public RuleAllowance_BuyBTC()
     {
-        super(_ruleType, _actionType);
-        //ruleType = _ruleType;
-        //actionType = _actionType;
+    }
+    
+    public RuleAllowance_BuyBTC(double _amountPerDayUSD)
+    {
+        super(RuleType.ALLOWANCE, ActionType.ALLOWANCE_BUY_BTC);
         amountPerDayUSD = _amountPerDayUSD;
     }
     
     @Override
-    public void DoAction()
+    public void doAction()
     {
         
         int msPerDay = 1000*60*60*24;
         double intervalsPerDay =  msPerDay / CryptomoneyAutotask.iterationIntervalMS;
         
         double amountPerIntervalUSD = amountPerDayUSD / intervalsPerDay;
-        CryptomoneyAutotask.logProv.LogMessage("actiontype: " + actionType.toString() + " amount/interval: " + amountPerIntervalUSD);      
+        CryptomoneyAutotask.logProv.LogMessage("actiontype: " + getActionType().toString() + " amount/interval: " + amountPerIntervalUSD);      
         
-        if(actionType == ActionType.ALLOWANCE_BUY_BTC_POSTONLY)
-        {
-            this.account.addAllowanceBuyBTCinUSD(amountPerIntervalUSD);
-            CryptomoneyAutotask.logProv.LogMessage("new allowanceBuyBTCinUSD: " + account.getAllowanceBuyBTCinUSD());      
-        }
-        else
-        {
-            CryptomoneyAutotask.logProv.LogException(new Exception("not implemented " + actionType.toString()));
-            System.exit(1);
-        }
+        this.account.addAllowanceBuyBTCinUSD(amountPerIntervalUSD);
+        CryptomoneyAutotask.logProv.LogMessage("new allowanceBuyBTCinUSD: " + account.getAllowanceBuyBTCinUSD());     
         
+    }
+    
+    @Override
+    public String getHelpString()
+    {
+        zz
     }
 }

@@ -26,8 +26,13 @@ import cryptomoney.autotask.CryptomoneyAutotask;
 public abstract class Rule
 {
     ExchangeAccount account;
-    ActionType actionType;
+    private ActionType actionType;
     private RuleType ruleType;
+    
+    public Rule()
+    {
+        
+    }
     
     public Rule(RuleType _ruleType, ActionType _actionType)
     {
@@ -44,5 +49,18 @@ public abstract class Rule
         return ruleType;
     }
     
-    public abstract void DoAction();
+    /**
+     * @return the actionType
+     */
+    public ActionType getActionType()
+    {
+        return actionType;
+    }
+    
+    public abstract void doAction();
+    
+    public abstract String getHelpString();
+
+    
+    
 }
