@@ -20,6 +20,7 @@ import com.coinbase.exchange.api.accounts.Account;
 import cryptomoney.autotask.CryptomoneyAutotask;
 import com.coinbase.exchange.api.payments.PaymentType;
 import com.coinbase.exchange.api.entity.PaymentResponse;
+import cryptomoney.autotask.functions.SharedFunctions;
 import java.util.List;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
@@ -30,38 +31,61 @@ import java.math.RoundingMode;
  */
 public class RuleAction_DepositUSD extends Rule
 {
-    private double amountPerDayUSD;
+    private double maximumAvgOccurrencesPerDay;
     private double minimumUSDQuantityThreshold;
     private double maximumUSDQuantity;
     
+    private int executionCount = 0; //if we set this to 999999 then it would execute right away upon running program (maybe)
+    
     public RuleAction_DepositUSD()
     {
+        super(RuleType.ACTION, ActionType.ACTION_WITHDRAW_BTC_TO_COINBASE);
     }
     
-    public RuleAction_DepositUSD(double _amountPerDayUSD, double _minimumUSDQuantityThreshold, double _maximumUSDQuantity)
+    public RuleAction_DepositUSD(boolean _executeImmediately, double _maximumAvgOccurrencesPerDay, double _minimumUSDQuantityThreshold, double _maximumUSDQuantity)
     {
         super(RuleType.ACTION, ActionType.ACTION_WITHDRAW_BTC_TO_COINBASE);
-        amountPerDayUSD = _amountPerDayUSD;
+        maximumAvgOccurrencesPerDay = _maximumAvgOccurrencesPerDay;
         minimumUSDQuantityThreshold = _minimumUSDQuantityThreshold;
         maximumUSDQuantity = _maximumUSDQuantity;
+        
+        if(_executeImmediately)
+        {
+            executionCount = 999999999;
+        }
     }
     
     @Override
     public void doAction()
     {
-        //int msPerDay = 1000*60*60*24;
-        //double intervalsPerDay =  msPerDay / cbpdca.Cbpdca.iterationIntervalMS;
-        //double amountPerInterval = amountPerDayUSD / intervalsPerDay;
+        CryptomoneyAutotask.logProv.LogMessage(getHelpString());
         
+        executionCount++;
+        
+
         
         if(this.account.getAllowanceDepositUSD()< minimumUSDQuantityThreshold)
         {
-            CryptomoneyAutotask.logProv.LogMessage("account.getAllowanceDepositUSD() does not exceed minimumUSDQuantityThreshold");
+            CryptomoneyAutotask.logProv.LogMessage("account.getAllowanceDepositUSD() does not exceed minimumUSDQuantityThreshold " + this.account.getAllowanceDepositUSD() + "/" + minimumUSDQuantityThreshold);
             return;
         }
 
-        //todo: random chance of proceeding?
-        //TODO: max interval of actually doing this
+
+        
+        double systemExecutionsPerDay = SharedFunctions.GetNumberOfSystemIntervalsPerDay();
+        double numberOfExecutionsBeforeExecutingOnce = systemExecutionsPerDay / maximumAvgOccurrencesPerDay;
+        
+        CryptomoneyAutotask.logProv.LogMessage("execution count: " + executionCount + "/" + numberOfExecutionsBeforeExecutingOnce);
+        if(executionCount < numberOfExecutionsBeforeExecutingOnce)
+        {
+            return; //keep waiting...
+        }
+        else
+        {
+            executionCount = 0;
+        }
+        
+        
         
         double amountToDeposit = this.account.getAllowanceDepositUSD();
         if(amountToDeposit > maximumUSDQuantity)
@@ -74,8 +98,8 @@ public class RuleAction_DepositUSD extends Rule
         PaymentType paymentTypeBank = null;
         for(PaymentType paymentType : paymentTypes)
         {
-            CryptomoneyAutotask.logProv.LogMessage("paymentType account retrieved: " + paymentType.toString()); //todo: keep this, shows last 4 digit bank#?
-            if(paymentTypeBank.getCurrency().equals("USD") && paymentTypeBank.getPrimary_buy()) //TODO: abstract away USD and BTC
+            CryptomoneyAutotask.logProv.LogMessage("paymentType account retrieved: " + paymentType.getAllow_buy() + " " + paymentType.getId() + " " + paymentType.getName() + " " + paymentType.getType()); //todo: keep this, shows last 4 digit bank#?
+            if(paymentType.getCurrency().equals("USD") && paymentType.getPrimary_buy()) //todo: abstract away USD and BTC
             {
                 if(paymentTypeBank != null)
                 {
@@ -87,16 +111,27 @@ public class RuleAction_DepositUSD extends Rule
             }
         }
         
+        if(paymentTypeBank == null)
+        {
+            CryptomoneyAutotask.logProv.LogMessage("ERROR, NO BANK PAYMENT TYPE FOUND");
+            System.exit(1);
+        }
         
-        PaymentResponse response = CryptomoneyAutotask.depositService.depositViaPaymentMethod(BigDecimal.ONE, "USD", paymentTypeBank.getId());
-        CryptomoneyAutotask.logProv.LogMessage("USD deposit response: " + response.toString());
         
+        PaymentResponse response = CryptomoneyAutotask.depositService.depositViaPaymentMethod(BigDecimal.valueOf(amountToDeposit), "USD", paymentTypeBank.getId());
+        CryptomoneyAutotask.logProv.LogMessage("USD deposit response: " + response.getCurrency() + " " + response.getAmount() + " " + response.getPayout_at());
+        
+        //purge any extra allowance
+        this.account.resetAllowanceDepositUSD();
+        
+        
+        CryptomoneyAutotask.logProv.LogMessage("");
     }
     
     @Override
     public String getHelpString()
     {
-        zz
+        return this.getRuleType() + " " + this.getActionType() + "";
     }
 }
 

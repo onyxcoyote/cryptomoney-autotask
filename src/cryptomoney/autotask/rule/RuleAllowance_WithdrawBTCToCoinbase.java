@@ -28,17 +28,24 @@ public class RuleAllowance_WithdrawBTCToCoinbase extends Rule
     
     public RuleAllowance_WithdrawBTCToCoinbase()
     {
+        super(RuleType.ALLOWANCE, ActionType.ALLOWANCE_WITHDRAW_BTC_TO_COINBASE);
     }
     
-    public RuleAllowance_WithdrawBTCToCoinbase(double _amountPerDayUSD)
+    public RuleAllowance_WithdrawBTCToCoinbase(boolean _executeImmediately, double _amountPerDayUSD)
     {
         super(RuleType.ALLOWANCE, ActionType.ALLOWANCE_WITHDRAW_BTC_TO_COINBASE);
         amountPerDayUSD = _amountPerDayUSD;
+        
+        if(_executeImmediately)
+        {
+            this.account.addAllowanceBuyBTCinUSD(amountPerDayUSD); //A FULL DAY'S AMOUNT
+        }
     }
     
     @Override
     public void doAction()
     {
+        CryptomoneyAutotask.logProv.LogMessage(getHelpString());
         
         int msPerDay = 1000*60*60*24;
         double intervalsPerDay =  msPerDay / CryptomoneyAutotask.iterationIntervalMS;
@@ -48,12 +55,13 @@ public class RuleAllowance_WithdrawBTCToCoinbase extends Rule
         
         this.account.addAllowanceWithdrawBTCToCoinbaseInUSD(amountPerIntervalUSD);
         CryptomoneyAutotask.logProv.LogMessage("new allowanceWithdrawBTCToCoinbaseInUSD: " + account.getAllowanceWithdrawBTCToCoinbaseInUSD());      
-        
+     
+        CryptomoneyAutotask.logProv.LogMessage("");
     }
     
     @Override
     public String getHelpString()
     {
-        return ""
+        return this.getRuleType() + " " + this.getActionType() + "";
     }
 }

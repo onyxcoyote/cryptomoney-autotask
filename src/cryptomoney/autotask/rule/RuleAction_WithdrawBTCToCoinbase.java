@@ -20,6 +20,9 @@ import com.coinbase.exchange.api.accounts.Account;
 import cryptomoney.autotask.CryptomoneyAutotask;
 import com.coinbase.exchange.api.payments.CoinbaseAccount;
 import com.coinbase.exchange.api.entity.PaymentResponse;
+import com.coinbase.exchange.api.marketdata.MarketData;
+import com.coinbase.exchange.api.marketdata.OrderItem;
+import cryptomoney.autotask.functions.SharedFunctions;
 import java.util.List;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
@@ -30,42 +33,66 @@ import java.math.RoundingMode;
  */
 public class RuleAction_WithdrawBTCToCoinbase extends Rule
 {
-    private double amountPerDayUSD;
+    private double maximumAvgOccurrencesPerDay;
     private double minimumUSDQuantityThreshold;
     private double maximumUSDQuantity;
     
+    private int executionCount = 0; //if we set this to 999999 then it would execute right away upon running program (maybe)
+    
     public RuleAction_WithdrawBTCToCoinbase()
     {
+        super(RuleType.ACTION, ActionType.ACTION_WITHDRAW_BTC_TO_COINBASE);
     }
     
-    public RuleAction_WithdrawBTCToCoinbase(double _amountPerDayUSD, double _minimumUSDQuantityThreshold, double _maximumUSDQuantity)
+    public RuleAction_WithdrawBTCToCoinbase(boolean _executeImmediately, double _maximumAvgOccurrencesPerDay, double _minimumUSDQuantityThreshold, double _maximumUSDQuantity)
     {
         super(RuleType.ACTION, ActionType.ACTION_WITHDRAW_BTC_TO_COINBASE);
-        amountPerDayUSD = _amountPerDayUSD;
+
+        maximumAvgOccurrencesPerDay = _maximumAvgOccurrencesPerDay;
         minimumUSDQuantityThreshold = _minimumUSDQuantityThreshold;
         maximumUSDQuantity = _maximumUSDQuantity;
+        
+        if(_executeImmediately)
+        {
+            executionCount = 999999999;
+        }
     }
     
     @Override
     public void doAction()
     {
-        //int msPerDay = 1000*60*60*24;
-        //double intervalsPerDay =  msPerDay / cbpdca.Cbpdca.iterationIntervalMS;
-        //double amountPerInterval = amountPerDayUSD / intervalsPerDay;
+        CryptomoneyAutotask.logProv.LogMessage(getHelpString());
+        
+        executionCount++;
+
         
         
         if(this.account.getAllowanceWithdrawBTCToCoinbaseInUSD() < minimumUSDQuantityThreshold)
         {
-            CryptomoneyAutotask.logProv.LogMessage("account.getAllowanceWithdrawBTCToCoinbaseInUSD() does not exceed minimumUSDQuantityThreshold");
+            CryptomoneyAutotask.logProv.LogMessage("account.getAllowanceWithdrawBTCToCoinbaseInUSD() does not exceed minimumUSDQuantityThreshold " + this.account.getAllowanceWithdrawBTCToCoinbaseInUSD() + "/" + minimumUSDQuantityThreshold);
             return;
         }
         
-        //TODO: RANDOM CHANCE TO PROCEED
-        //todo: add regular delay as well?
         
-        int btcPrice = 3100; //TODO: FIX THIS!
         
-        //TODO: we need a regular delay to prevent this from happening too much
+        double systemExecutionsPerDay = SharedFunctions.GetNumberOfSystemIntervalsPerDay();
+        double numberOfExecutionsBeforeExecutingOnce = systemExecutionsPerDay / maximumAvgOccurrencesPerDay;
+        
+        CryptomoneyAutotask.logProv.LogMessage("execution count: " + executionCount + "/" + numberOfExecutionsBeforeExecutingOnce);
+        if(executionCount < numberOfExecutionsBeforeExecutingOnce)
+        {
+            //keep waiting...
+            return;
+        }
+        else
+        {
+            executionCount = 0;
+        }
+        
+        
+        
+        BigDecimal btcPrice = SharedFunctions.GetBestBTCBuyPrice();
+        
         List<Account> accounts = CryptomoneyAutotask.accountService.getAccounts();
         CryptomoneyAutotask.logProv.LogMessage("retrieved coinbase PRO accounts, count: "+accounts.size());
         
@@ -91,7 +118,7 @@ public class RuleAction_WithdrawBTCToCoinbase extends Rule
         if(btcAvail != null)
         { 
             valBtcAvail = btcAvail.doubleValue();
-            usdBalanceValueOfBTCInCoinbasePRO = valBtcAvail*btcPrice;
+            usdBalanceValueOfBTCInCoinbasePRO = valBtcAvail*btcPrice.doubleValue();
         }
         
         if(valBtcAvail > 0)
@@ -100,15 +127,13 @@ public class RuleAction_WithdrawBTCToCoinbase extends Rule
 
             CryptomoneyAutotask.logProv.LogMessage("actiontype: " + getActionType().toString());
 
-
             double btcToWithdraw = valBtcAvail;
             if(btcToWithdraw > maximumUSDQuantity)
             {
                 btcToWithdraw = maximumUSDQuantity;
             }
 
-
-            List<CoinbaseAccount> coinbaseAccounts = CryptomoneyAutotask.paymentService.getCoinbaseAccounts(); //TODO: instead of this get the id somehow else and code it into config
+            List<CoinbaseAccount> coinbaseAccounts = CryptomoneyAutotask.paymentService.getCoinbaseAccounts(); //optional: instead of this get the id somehow else and code it into config?
             CryptomoneyAutotask.logProv.LogMessage("retrieved coinbase accounts, count: "+coinbaseAccounts.size());
             
             CoinbaseAccount btcCoinbaseAccount = null;
@@ -120,19 +145,26 @@ public class RuleAction_WithdrawBTCToCoinbase extends Rule
                     if(btcAccount != null)
                     {
                         CryptomoneyAutotask.logProv.LogMessage("ERROR, TWO -PRIMARY- BTC ACCOUNTS FOUND WHEN EXPECTINE ONE, EXITING"); //todo: test this to make sure there would only be one account
-                        //TODO: in this case, I think there COULD be multiple accounts unless the getPrimary() takes care of it
+                            //in this case, I think there COULD be multiple accounts unless the getPrimary() takes care of it
                         System.exit(1);
                     }
                     btcCoinbaseAccount = coinbaseAccount;
                 }
             }
             
+            if(btcCoinbaseAccount == null)
+            {
+                CryptomoneyAutotask.logProv.LogMessage("ERROR BTC coinbase account not found");
+                System.exit(1);
+            }
             
             BigDecimal bdBTCAmountToWithdraw = BigDecimal.valueOf(btcToWithdraw).setScale(8, RoundingMode.HALF_EVEN);
             
-            PaymentResponse response = CryptomoneyAutotask.withdrawalsService.makeWithdrawalToCoinbase(bdBTCAmountToWithdraw, "BTC", btcCoinbaseAccount.getId());
+            PaymentResponse response = CryptomoneyAutotask.withdrawalsService.makeWithdrawalToCoinbase(bdBTCAmountToWithdraw, "BTC", btcCoinbaseAccount.getId()); //API CALL
             CryptomoneyAutotask.logProv.LogMessage("USD deposit response: " + response.toString());
                     
+            //purge any extra allowance
+            this.account.resetAllowanceWithdrawBTCToCoinbaseInUSD();
                     
         }
         else
@@ -140,11 +172,12 @@ public class RuleAction_WithdrawBTCToCoinbase extends Rule
             CryptomoneyAutotask.logProv.LogMessage("BTC available for withdraw is 0");
         }
         
+        CryptomoneyAutotask.logProv.LogMessage("");
     }
     
     @Override
     public String getHelpString()
     {
-        zz
+        return this.getRuleType() + " " + this.getActionType() + "";
     }
 }

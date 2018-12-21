@@ -28,17 +28,25 @@ public class RuleAllowance_BuyBTC extends Rule
     
     public RuleAllowance_BuyBTC()
     {
+        super(RuleType.ALLOWANCE, ActionType.ALLOWANCE_BUY_BTC);
     }
     
-    public RuleAllowance_BuyBTC(double _amountPerDayUSD)
+    public RuleAllowance_BuyBTC(boolean _executeImmediately, double _amountPerDayUSD)
     {
         super(RuleType.ALLOWANCE, ActionType.ALLOWANCE_BUY_BTC);
+        
         amountPerDayUSD = _amountPerDayUSD;
+        
+        if(_executeImmediately)
+        {
+            this.account.addAllowanceBuyBTCinUSD(amountPerDayUSD); //A FULL DAY'S AMOUNT
+        }
     }
     
     @Override
     public void doAction()
     {
+        CryptomoneyAutotask.logProv.LogMessage(getHelpString());
         
         int msPerDay = 1000*60*60*24;
         double intervalsPerDay =  msPerDay / CryptomoneyAutotask.iterationIntervalMS;
@@ -49,11 +57,12 @@ public class RuleAllowance_BuyBTC extends Rule
         this.account.addAllowanceBuyBTCinUSD(amountPerIntervalUSD);
         CryptomoneyAutotask.logProv.LogMessage("new allowanceBuyBTCinUSD: " + account.getAllowanceBuyBTCinUSD());     
         
+        CryptomoneyAutotask.logProv.LogMessage("");
     }
     
     @Override
     public String getHelpString()
     {
-        zz
+        return this.getRuleType() + " " + this.getActionType() + "";
     }
 }

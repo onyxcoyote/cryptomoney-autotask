@@ -36,9 +36,11 @@ public abstract class Rule
     
     public Rule(RuleType _ruleType, ActionType _actionType)
     {
-        account = CryptomoneyAutotask.app.account1; //there is only one of these...
+        
+        account = CryptomoneyAutotask.app.account1; //there is only one of these... TODO
         ruleType = _ruleType;
         actionType = _actionType;
+        //System.out.println("TEMP constructor: " + actionType.toString());
     }
 
     /**
@@ -58,7 +60,7 @@ public abstract class Rule
     }
     
     public abstract void doAction();
-    
+
     public abstract String getHelpString();
 
     

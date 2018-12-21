@@ -64,6 +64,8 @@ public class Autotask
     public ArrayList<Rule> rules = new ArrayList<>();
     public ArrayList<Rule> availableRules = new ArrayList<>();
     
+    private boolean executeImmediately;
+    
     //public static int iterationIntervalMS = 1000*60*5; //5 minutes
     
 
@@ -77,10 +79,10 @@ public class Autotask
     
     
     //@Autowired
-    public Autotask()
+    public Autotask(boolean _executeImmediately)
     {
         account1 = new ExchangeAccount();
-        
+        executeImmediately = _executeImmediately;
     }
     
     /**
@@ -95,8 +97,6 @@ public class Autotask
     
     public void Run()
     {
-
-                
         Initialize();
         
         CancelOpenOrders();
@@ -109,11 +109,9 @@ public class Autotask
         LoadRuleHelp();
         LoadAccounts();
         LoadRules();
-
-                
-        //GdaxApiApplication app = new GdaxApiApplication();
-        //GdaxConfiguration config = new GdaxConfiguration();
+        ValidateRules();
         
+        //todo-low: https://docs.pro.coinbase.com/#get-products min size can change in the future
     }
     
     private void CancelOpenOrders()
@@ -131,9 +129,11 @@ public class Autotask
         availableRules.add(new RuleAllowance_BuyBTC());
         availableRules.add(new RuleAllowance_DepositUSD());
         availableRules.add(new RuleAllowance_WithdrawBTCToCoinbase());
-        
-        when adding a new rule in LoadRules, do it through a method, verify it matches one of these rules in ruletype and name, etc.
-        
+              
+        for(Rule ruleTemplate : availableRules)
+        {
+            CryptomoneyAutotask.logProv.LogMessage(ruleTemplate.getHelpString());
+        }
     }
     
     private void LoadAccounts()
@@ -144,21 +144,25 @@ public class Autotask
     private void LoadRules()
     {
         //todo: un-hard code rules
+        //todo: use BigDecimal instead of double
         
         //ALLOWANCE RULES
         //account 1 - ALLOWANCE  buy_bitcoin $21/day (divided per hour)
         double ALLOWANCE_USD_AMOUNT_PER_DAY = 16000.00; //TODO: test
-        RuleAllowance_BuyBTC allowance1 = new RuleAllowance_BuyBTC(ALLOWANCE_USD_AMOUNT_PER_DAY); 
+        //double ALLOWANCE_USD_AMOUNT_PER_DAY = 21.00;
+        RuleAllowance_BuyBTC allowance1 = new RuleAllowance_BuyBTC(executeImmediately, ALLOWANCE_USD_AMOUNT_PER_DAY); 
         rules.add(allowance1);
         
         //account 1 - ALLOWANCE  coinbase_pro_to_coinbase $20/day (divided per hour)
-        double ALLOWANCE_BTC_TO_COINBASE_PER_DAY = 20.50;
-        RuleAllowance_WithdrawBTCToCoinbase allowance2 = new RuleAllowance_WithdrawBTCToCoinbase(ALLOWANCE_BTC_TO_COINBASE_PER_DAY);
+        double ALLOWANCE_BTC_TO_COINBASE_PER_DAY = 14000.00;
+        //double ALLOWANCE_BTC_TO_COINBASE_PER_DAY = 20.50;
+        RuleAllowance_WithdrawBTCToCoinbase allowance2 = new RuleAllowance_WithdrawBTCToCoinbase(executeImmediately, ALLOWANCE_BTC_TO_COINBASE_PER_DAY);
         rules.add(allowance2);
         
         //account 1 - ALLOWANCE  deposit USD $22/day (divided per hour)
-        double ALLOWANCE_DEPOSIT_USD_PER_DAY = 22.00;
-        RuleAllowance_DepositUSD allowance3 = new RuleAllowance_DepositUSD(ALLOWANCE_DEPOSIT_USD_PER_DAY);
+        double ALLOWANCE_DEPOSIT_USD_PER_DAY = 95000.00;
+        //double ALLOWANCE_DEPOSIT_USD_PER_DAY = 22.00;
+        RuleAllowance_DepositUSD allowance3 = new RuleAllowance_DepositUSD(executeImmediately, ALLOWANCE_DEPOSIT_USD_PER_DAY);
         rules.add(allowance3);
 
         
@@ -173,43 +177,77 @@ public class Autotask
         //todo:
         
         
-        
+        /*
         //ACTION RULES
         //account 1 - ACTION buy (w/ BUYMETHOD) around X bitcoin per day using USD, threshold 0.001 bitcoin, max .005 bitcoin, Do 25% of the time (randomness)
         //todo: add max single purchase? 
-        double BUY_USD_AMOUNT_PER_DAY_USD = 21.00;
+        //double BUY_USD_AMOUNT_PER_DAY_USD = 21.00;
+        double MAX_AVERAGE_ACTIONS_PER_DAY = 10;
+        double MIN_USD_BUY_AMOUNT = 8.00;
+        
         double COINBASE_PRO_MINIMUM_BTC_TRADE_THRESHOLD = 0.001;
         double MAXIMUM_BTC_AMOUNT_TO_PURCHASE = 0.01;
         double PERCENT_OF_TIME_TO_DO_ACTION_WHEN_TRIGGERED = 0.25; //allows some randomness so it doesn't always happen
         RuleAction_BuyBTCDCAPostOnly action1 = new RuleAction_BuyBTCDCAPostOnly(
-                BUY_USD_AMOUNT_PER_DAY_USD, 
+                executeImmediately,
+                MAX_AVERAGE_ACTIONS_PER_DAY, 
+                MIN_USD_BUY_AMOUNT,
                 COINBASE_PRO_MINIMUM_BTC_TRADE_THRESHOLD, 
                 MAXIMUM_BTC_AMOUNT_TO_PURCHASE,
                 PERCENT_OF_TIME_TO_DO_ACTION_WHEN_TRIGGERED);
         rules.add(action1);
 
+        //todo: get rid of allowance and add to regular rules
+        
         //account 1 - ACTION withdraw X bitcoin (from coinbase pro) to coinbase account, threshold $20->bitcoin, max $100->bitcoin    
-        double TRANSFER_TO_COINBASE_PER_DAY_USD = 20.00;
+        //double TRANSFER_TO_COINBASE_PER_DAY_USD = 20.00;
+        MAX_AVERAGE_ACTIONS_PER_DAY = 1.0;
         double MINIMUM_AMOUNT_TO_TRANSFER = 20.00;
         double MAXIMUM_AMOUNT_TO_TRANSFER = 50.00;
         RuleAction_WithdrawBTCToCoinbase action2 = new RuleAction_WithdrawBTCToCoinbase(
-                TRANSFER_TO_COINBASE_PER_DAY_USD,
+                executeImmediately,
+                MAX_AVERAGE_ACTIONS_PER_DAY,
                 MINIMUM_AMOUNT_TO_TRANSFER,
                 MAXIMUM_AMOUNT_TO_TRANSFER);
         rules.add(action2);
+        */
 
         //account 1 - ACTION transfer X USD from bank 1, threshold >= $50, max $100
-        double DEPOSIT_USD_PER_DAY = 22.00;
-        double MINIMUM_AMOUNT_TO_TRANSFER = 50.00;
-        double MAXIMUM_AMOUNT_TO_TRANSFER = 100.00;
+        //double DEPOSIT_USD_PER_DAY = 22.00;
+        double MAX_AVERAGE_ACTIONS_PER_DAY = 0.5;
+        
+        double MINIMUM_AMOUNT_TO_DEPOSIT = 50.00;
+        double MAXIMUM_AMOUNT_TO_DEPOSIT = 100.00;
         RuleAction_DepositUSD action3 = new RuleAction_DepositUSD(
-                DEPOSIT_USD_PER_DAY, 
-                MINIMUM_AMOUNT_TO_TRANSFER, 
-                MAXIMUM_AMOUNT_TO_TRANSFER);
-        rules.add(action2);
+                executeImmediately,
+                MAX_AVERAGE_ACTIONS_PER_DAY, 
+                MINIMUM_AMOUNT_TO_DEPOSIT, 
+                MAXIMUM_AMOUNT_TO_DEPOSIT);
+        rules.add(action3);
         
-        todo: very all rules against a set of rules
-        
+    }
+    
+    private void ValidateRules()
+    {
+        for(Rule rule : rules)
+        {
+            boolean valid = false;
+            for(Rule ruleTemplate : availableRules)
+            {
+                if(ruleTemplate.getRuleType().equals(rule.getRuleType()) &&
+                        ruleTemplate.getActionType().equals(rule.getActionType()))
+                {
+                    valid = true;
+                }
+            }
+            
+            if(!valid)
+            {
+                CryptomoneyAutotask.logProv.LogMessage("rule not found " + rule.getRuleType() + " " + rule.getActionType());     
+                CryptomoneyAutotask.logProv.LogMessage("rule validation failed");     
+                System.exit(1);
+            }
+        }
         
     }
     
@@ -233,7 +271,7 @@ public class Autotask
         {
             if(r.getRuleType() == RuleType.ALLOWANCE)
             {
-                r.DoAction();
+                r.doAction();
             }
         }
         
@@ -241,7 +279,7 @@ public class Autotask
         {
             if(r.getRuleType() == RuleType.ALARM)
             {
-                r.DoAction();
+                r.doAction();
             }
         }
         
@@ -250,7 +288,7 @@ public class Autotask
         {
             if(r.getRuleType() == RuleType.ACTION)
             {
-                r.DoAction();
+                r.doAction();
             }
         }
     }

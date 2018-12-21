@@ -55,27 +55,34 @@ public class ExchangeAccount
     }
     
     /**
-     * @param _amountToIncrementUSD 
-     */
-    public void addAllowanceBuyBTCinUSD(double _amountToIncrementUSD)
-    {
-        allowanceBuyBTCinUSD += _amountToIncrementUSD;
-    }
-
-    /**
      * @return the allowanceBuyBTC
      */
     public double getAllowanceBuyBTCinUSD()
     {
-        return allowanceBuyBTCinUSD;
+        return this.allowanceBuyBTCinUSD;
     }
+    
+    /**
+     * @param _amountToIncrementUSD 
+     */
+    public void addAllowanceBuyBTCinUSD(double _amountToIncrementUSD)
+    {
+        this.allowanceBuyBTCinUSD += _amountToIncrementUSD;
+    }
+
+    public void resetAllowanceBuyBTCinUSD()
+    {
+        this.allowanceBuyBTCinUSD = 0;
+    }
+    
+    
     
     /**
      * @return the allowanceWithdrawBTCToCoinbaseInUSD
      */
     public double getAllowanceWithdrawBTCToCoinbaseInUSD()
     {
-        return allowanceWithdrawBTCToCoinbaseInUSD;
+        return this.allowanceWithdrawBTCToCoinbaseInUSD;
     }
 
     /**
@@ -86,6 +93,11 @@ public class ExchangeAccount
         this.allowanceWithdrawBTCToCoinbaseInUSD += _amountToIncrementUSD;
     }
     
+    public void resetAllowanceWithdrawBTCToCoinbaseInUSD()
+    {
+        this.allowanceWithdrawBTCToCoinbaseInUSD = 0;
+    }
+    
     
     
     /**
@@ -93,7 +105,7 @@ public class ExchangeAccount
      */
     public double getAllowanceDepositUSD()
     {
-        return allowanceDepositUSD;
+        return this.allowanceDepositUSD;
     }
 
     /**
@@ -104,6 +116,12 @@ public class ExchangeAccount
         this.allowanceDepositUSD += _amountToIncrementUSD;
     }
 
+    public void resetAllowanceDepositUSD()
+    {
+        this.allowanceDepositUSD = 0;
+    }
+    
+    
     
     //todo: move this elsewhere
     //todo: need to test successful fills
@@ -146,6 +164,7 @@ public class ExchangeAccount
                     orphanedOrders.add(openOrder);
                     if(cancelAnyOpen)
                     {
+                        CryptomoneyAutotask.logProv.LogMessage("Adding orphan order to cancellation queue: " + openOrder.getId());
                         ordersToCancel.add(openOrder);
                     }
                 }
@@ -165,12 +184,13 @@ public class ExchangeAccount
                         found = true;
                         if(cancelAnyOpen)
                         {
+                            CryptomoneyAutotask.logProv.LogMessage("Adding known order to cancellation queue: " + openOrder.getId());
                             ordersToCancel.add(openOrder);
                         }
                     
                         double filledSize = Double.valueOf(openOrder.getFilled_size());
                         double originalSize = Double.valueOf(openOrder.getSize());
-                        CryptomoneyAutotask.logProv.LogMessage("order ~pending: " + openOrder.getId() + " " + openOrder.toString() + " filled: " + filledSize + "/" + originalSize);
+                        CryptomoneyAutotask.logProv.LogMessage("order known ~pending: " + openOrder.getId() + " " + openOrder.toString() + " filled: " + filledSize + "/" + originalSize);
                         //Cbpdca.logProv.LogMessage(openOrder.toString());
                         break;
                     }
@@ -187,7 +207,7 @@ public class ExchangeAccount
             {
                 if(ordersToCancel.size() > 0)
                 {
-                    CryptomoneyAutotask.logProv.LogMessage("cancelling open orders...");
+                    CryptomoneyAutotask.logProv.LogMessage("cancelling orders, count: " + ordersToCancel.size());
                 }
                 
                 for(Order orderToCancel : ordersToCancel)
@@ -209,8 +229,6 @@ public class ExchangeAccount
                 lsoc.library.utilities.Sleep.Sleep(100); //slow down so we're not querying too fast. this limits it to 10x/second
                 //this sleep might also give time for any cancel requests to finish
                 
-                
-                
                 //Order actualOrder = Cbpdca.app.orderService().getOrder(missingOrder.getId());
                 //if(actualOrder == null)
                 //{
@@ -220,7 +238,7 @@ public class ExchangeAccount
                 Fill fill = null;
                 
                 int resultLimit = 20;
-                List<Fill> fills = CryptomoneyAutotask.app.orderService().getFillByOrderId(Integer.valueOf(missingOrder.getId()), resultLimit);
+                List<Fill> fills = CryptomoneyAutotask.app.orderService().getFillByOrderId(missingOrder.getId(), resultLimit);
                 
                 if(fills.size() > 0)
                 {
