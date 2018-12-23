@@ -39,58 +39,65 @@ public class RuleAction_DepositUSD extends Rule
     
     public RuleAction_DepositUSD()
     {
-        super(RuleType.ACTION, ActionType.ACTION_WITHDRAW_BTC_TO_COINBASE);
+        super(RuleType.ACTION, ActionType.ACTION_DEPOSIT_USD);
     }
     
     public RuleAction_DepositUSD(boolean _executeImmediately, double _maximumAvgOccurrencesPerDay, double _minimumUSDQuantityThreshold, double _maximumUSDQuantity)
     {
-        super(RuleType.ACTION, ActionType.ACTION_WITHDRAW_BTC_TO_COINBASE);
+        super(RuleType.ACTION, ActionType.ACTION_DEPOSIT_USD);
         maximumAvgOccurrencesPerDay = _maximumAvgOccurrencesPerDay;
         minimumUSDQuantityThreshold = _minimumUSDQuantityThreshold;
         maximumUSDQuantity = _maximumUSDQuantity;
         
         if(_executeImmediately)
         {
-            executionCount = 999999999;
+            executionCount = (int)Math.ceil(getNumberOfExecutionsBeforeExecutingOnce());
         }
     }
     
+    private double getNumberOfExecutionsBeforeExecutingOnce()
+    {
+        double systemExecutionsPerDay = SharedFunctions.GetNumberOfSystemIntervalsPerDay();
+        double numberOfExecutionsBeforeExecutingOnce = systemExecutionsPerDay / maximumAvgOccurrencesPerDay;
+        return numberOfExecutionsBeforeExecutingOnce;
+    }
+        
     @Override
     public void doAction()
     {
-        CryptomoneyAutotask.logProv.LogMessage(getHelpString());
+        //CryptomoneyAutotask.logProv.LogMessage(getHelpString());
         
         executionCount++;
         
 
         
-        if(this.account.getAllowanceDepositUSD()< minimumUSDQuantityThreshold)
+        if(this.account.allowanceDepositUSD.getAllowance().doubleValue() < minimumUSDQuantityThreshold)
         {
-            CryptomoneyAutotask.logProv.LogMessage("account.getAllowanceDepositUSD() does not exceed minimumUSDQuantityThreshold " + this.account.getAllowanceDepositUSD() + "/" + minimumUSDQuantityThreshold);
+            CryptomoneyAutotask.logProv.LogMessage(getHelpString() + " account.getAllowanceDepositUSD() does not exceed minimumUSDQuantityThreshold " + this.account.allowanceDepositUSD.getAllowance() + "/" + minimumUSDQuantityThreshold);
             return;
         }
 
 
         
-        double systemExecutionsPerDay = SharedFunctions.GetNumberOfSystemIntervalsPerDay();
-        double numberOfExecutionsBeforeExecutingOnce = systemExecutionsPerDay / maximumAvgOccurrencesPerDay;
+        double numberOfExecutionsBeforeExecutingOnce = getNumberOfExecutionsBeforeExecutingOnce();
         
-        CryptomoneyAutotask.logProv.LogMessage("execution count: " + executionCount + "/" + numberOfExecutionsBeforeExecutingOnce);
+        CryptomoneyAutotask.logProv.LogMessage(getHelpString() + " execution count: " + executionCount + "/" + numberOfExecutionsBeforeExecutingOnce);
         if(executionCount < numberOfExecutionsBeforeExecutingOnce)
         {
             return; //keep waiting...
         }
         else
         {
-            executionCount = 0;
+            executionCount-=numberOfExecutionsBeforeExecutingOnce;
         }
         
         
         
-        double amountToDeposit = this.account.getAllowanceDepositUSD();
-        if(amountToDeposit > maximumUSDQuantity)
+        BigDecimal amountToDeposit = this.account.allowanceDepositUSD.getAllowance();
+        if(amountToDeposit.doubleValue() > maximumUSDQuantity)
         {
-           amountToDeposit = maximumUSDQuantity;
+           BigDecimal amountAboveMax = amountToDeposit.subtract(BigDecimal.valueOf(maximumUSDQuantity));
+           amountToDeposit = amountToDeposit.subtract(amountAboveMax);
         }
 
         List<PaymentType> paymentTypes = CryptomoneyAutotask.paymentService.getPaymentTypes();
@@ -118,11 +125,20 @@ public class RuleAction_DepositUSD extends Rule
         }
         
         
-        PaymentResponse response = CryptomoneyAutotask.depositService.depositViaPaymentMethod(BigDecimal.valueOf(amountToDeposit), "USD", paymentTypeBank.getId());
-        CryptomoneyAutotask.logProv.LogMessage("USD deposit response: " + response.getCurrency() + " " + response.getAmount() + " " + response.getPayout_at());
+        
+        BigDecimal depositAboutBD = amountToDeposit.setScale(2, RoundingMode.HALF_EVEN);
+        PaymentResponse response = CryptomoneyAutotask.depositService.depositViaPaymentMethod(depositAboutBD, "USD", paymentTypeBank.getId()); //API CALL
+        CryptomoneyAutotask.logProv.LogMessage("Requested USD deposit, response: " + response.getCurrency() + " " + response.getAmount() + " " + response.getPayout_at());
+        CryptomoneyAutotask.logProvFile.LogMessage("Requested USD deposit, response: " + response.getCurrency() + " " + response.getAmount() + " " + response.getPayout_at());
+        this.account.allowanceDepositUSD.addToAllowance(amountToDeposit.negate());
         
         //purge any extra allowance
-        this.account.resetAllowanceDepositUSD();
+        if(this.account.allowanceDepositUSD.getAllowance().doubleValue() > 0)
+        {
+            CryptomoneyAutotask.logProv.LogMessage("purging USD deposit allowance " + this.account.allowanceDepositUSD.getAllowance());
+            CryptomoneyAutotask.logProvFile.LogMessage("purging USD deposit allowance " + this.account.allowanceDepositUSD.getAllowance());
+            this.account.allowanceDepositUSD.resetAllowance();
+        }
         
         
         CryptomoneyAutotask.logProv.LogMessage("");

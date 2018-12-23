@@ -16,6 +16,7 @@
  */
 package cryptomoney.autotask.exchangeaccount;
 
+import com.coinbase.exchange.api.accounts.Account;
 import cryptomoney.autotask.CryptomoneyAutotask;
 //import org.springframework.beans.factory.annotation.Autowired;
 //import org.springframework.stereotype.Component;
@@ -32,6 +33,9 @@ import java.util.HashMap;
 import java.math.MathContext;
 import java.math.RoundingMode;
 
+import cryptomoney.autotask.allowance.Allowance;
+import cryptomoney.autotask.functions.SharedFunctions;
+
 /**
  *
  * @author onyxcoyote <no-reply@onyxcoyote.com>
@@ -43,84 +47,59 @@ public class ExchangeAccount
     
     public ExchangeType exchangeType = ExchangeType.CoinbasePro;
     
-    private double allowanceBuyBTCinUSD = 0;
-    private double allowanceWithdrawBTCToCoinbaseInUSD = 0;
-    private double allowanceDepositUSD = 0;
+    public Allowance allowanceBuyBTCinUSD = new Allowance();
+    public Allowance allowanceWithdrawBTCToCoinbaseInUSD = new Allowance();
+    public Allowance allowanceDepositUSD = new Allowance();
     
     private HashMap<String, Order> orders = new HashMap<>();
     
+    public int btcBuyFrequencyDesperation = 0; //todo: can this be refactored, maybe make it an object
+    public static final int BTC_BUY_FREQUENCY_DESPERATION_THRESHOLD = 10;
             
     public ExchangeAccount()
     {
     }
     
-    /**
-     * @return the allowanceBuyBTC
-     */
-    public double getAllowanceBuyBTCinUSD()
+    public int getKnownPendingOrderCount()
     {
-        return this.allowanceBuyBTCinUSD;
+        if(orders == null)
+        {
+            return 0;
+        }
+        else
+        {
+            return orders.size();
+        }
     }
     
     /**
-     * @param _amountToIncrementUSD 
+     * CALLS API
+     * @return 
      */
-    public void addAllowanceBuyBTCinUSD(double _amountToIncrementUSD)
+    public Account getUSDCoinbaseProAccount()
     {
-        this.allowanceBuyBTCinUSD += _amountToIncrementUSD;
+        //TODO: save the account ID on initial loadand retrieve just the one account instead of all
+        
+        
+        List<Account> accounts = CryptomoneyAutotask.accountService.getAccounts();
+        
+        Account usdAccount = null;
+        for(Account acct : accounts)
+        {
+            CryptomoneyAutotask.logProv.LogMessage("CPB account retrieved: " + acct.getId() + " " + acct.getCurrency() + " " + acct.getAvailable() + "/" + acct.getBalance());
+            if(acct.getCurrency().equals("USD"))
+            {
+                if(usdAccount != null)
+                {
+                    CryptomoneyAutotask.logProv.LogMessage("ERROR, TWO BTC ACCOUNTS FOUND WHEN EXPECTINE ONE, EXITING"); //todo: test this to make sure there would only be one account
+                    System.exit(1);
+                }
+                usdAccount = acct;
+            }
+        }
+        
+        return usdAccount;
     }
-
-    public void resetAllowanceBuyBTCinUSD()
-    {
-        this.allowanceBuyBTCinUSD = 0;
-    }
-    
-    
-    
-    /**
-     * @return the allowanceWithdrawBTCToCoinbaseInUSD
-     */
-    public double getAllowanceWithdrawBTCToCoinbaseInUSD()
-    {
-        return this.allowanceWithdrawBTCToCoinbaseInUSD;
-    }
-
-    /**
-     * @param _amountToIncrementUSD 
-     */
-    public void addAllowanceWithdrawBTCToCoinbaseInUSD(double _amountToIncrementUSD)
-    {
-        this.allowanceWithdrawBTCToCoinbaseInUSD += _amountToIncrementUSD;
-    }
-    
-    public void resetAllowanceWithdrawBTCToCoinbaseInUSD()
-    {
-        this.allowanceWithdrawBTCToCoinbaseInUSD = 0;
-    }
-    
-    
-    
-    /**
-     * @return the allowanceDepositUSD
-     */
-    public double getAllowanceDepositUSD()
-    {
-        return this.allowanceDepositUSD;
-    }
-
-    /**
-     * @param _amountToIncrementUSD 
-     */
-    public void addAllowanceDepositUSD(double _amountToIncrementUSD)
-    {
-        this.allowanceDepositUSD += _amountToIncrementUSD;
-    }
-
-    public void resetAllowanceDepositUSD()
-    {
-        this.allowanceDepositUSD = 0;
-    }
-    
     
     
     //todo: move this elsewhere
@@ -215,10 +194,14 @@ public class ExchangeAccount
                     lsoc.library.utilities.Sleep.Sleep(100); //slow down so we're not querying too fast. this limits it to 10x/second
 
                     CryptomoneyAutotask.logProv.LogMessage("submitting cancel for " + orderToCancel.getId());
-                    String response = CryptomoneyAutotask.app.orderService().cancelOrder(orderToCancel.getId());
-                    CryptomoneyAutotask.logProv.LogMessage("cancel response: " + response);
+                    String response = CryptomoneyAutotask.app.orderService().cancelOrder(orderToCancel.getId()); //API CALL
+                    CryptomoneyAutotask.logProv.LogMessage("Requested order cancel, response: " + response);
+                    CryptomoneyAutotask.logProvFile.LogMessage("Requested order cancel, response: " + response);
                     //orders.remove(orderToCancel.getId()); //wait until later to verify it's been cancelled ? Or mark it as something we're cancelling?
                     ordersNotOpen.add(orderToCancel); //assume the cancel was complete
+                    
+                    this.btcBuyFrequencyDesperation++;
+                    CryptomoneyAutotask.logProv.LogMessage("desperation set to: " + this.btcBuyFrequencyDesperation + "/" + this.BTC_BUY_FREQUENCY_DESPERATION_THRESHOLD);      
                 }
             }
             
@@ -253,8 +236,11 @@ public class ExchangeAccount
                     
                     if(fill != null)
                     {
-                        CryptomoneyAutotask.logProv.LogMessage("debug: fill found: " + fill.getOrder_id() + " " + fill.toString() + " " + fill.getSettled()); 
+                        String logString = "fill found: " + fill.getOrder_id() + " " + fill.getSize() + " " + fill.getLiquidity() + " " + fill.getProduct_id() + " " + fill.getSide() + " " + fill.getSettled();
+                        CryptomoneyAutotask.logProv.LogMessage(logString); 
+                        CryptomoneyAutotask.logProvFile.LogMessage(logString); 
                         orderFound = true;
+                        btcBuyFrequencyDesperation=0; //stub
                     }
                 }
                 
@@ -263,7 +249,10 @@ public class ExchangeAccount
                     //we could compare ordersToCancel here
                     CryptomoneyAutotask.logProv.LogMessage("fill NOT FOUND: " + missingOrder.getId() + " assuming order was cancelled"); 
                     this.orders.remove(missingOrder.getId());
-                    allowanceBuyBTCinUSD+= Double.valueOf(missingOrder.getSize())*Double.valueOf(missingOrder.getPrice());
+                    BigDecimal missingOrderPrice = BigDecimal.valueOf(Double.valueOf(missingOrder.getPrice()));
+                    BigDecimal missingOrderCoinAmount = BigDecimal.valueOf(Double.valueOf(missingOrder.getSize()));
+                    BigDecimal usdValueNotPurchased = missingOrderCoinAmount.multiply(missingOrderPrice);
+                    allowanceBuyBTCinUSD.addToAllowance(usdValueNotPurchased);
                     madeChanges = true;
                     lsoc.library.utilities.Sleep.Sleep(200);
                 }
@@ -282,13 +271,14 @@ public class ExchangeAccount
                         if(missedSize > 0)
                         {
                             //add it back to allowance
-                            allowanceBuyBTCinUSD+=missedSize;
+                            allowanceBuyBTCinUSD.addToAllowance(BigDecimal.valueOf(missedSize));
                             madeChanges = true;
                         }
 
                         this.orders.remove(missingOrder.getId()); //remove order
-                        CryptomoneyAutotask.logProv.LogMessage("ORDER DONE: " + missingOrder.getId() + " " + missingOrder.toString() + " filled: ?"  + "/?" );
-
+                        CryptomoneyAutotask.logProv.LogMessage("ORDER DONE: " + missingOrder.getId() + " " + missingOrder.toString() + " filled: " + fill.getSize().doubleValue()+ "/" + missingOrder.getSize());
+                        CryptomoneyAutotask.logProvFile.LogMessage("ORDER DONE: " + missingOrder.getId() + " " + missingOrder.toString() + " filled: " + fill.getSize().doubleValue()+ "/" + missingOrder.getSize());
+                        btcBuyFrequencyDesperation=0; //stub
                     }
                 }
             }
@@ -302,10 +292,65 @@ public class ExchangeAccount
         return madeChanges;
     }
     
+    public Order buyBTCImmediate(BigDecimal coinAmountToPurchase)
+    {
+         if(this.exchangeType == ExchangeType.CoinbasePro)
+        {
+            //OrderService orderService = new com.coinbase.exchange.api.orders.OrderService();
+            
+            
+            
+            CryptomoneyAutotask.logProv.LogMessage("do buy quantity: " + coinAmountToPurchase);
+            
+            //double purchasePrice = 3100.01; //TODO: IMPORTANT!: match one of the existing buy prices and use that.
+            BigDecimal purchasePrice = SharedFunctions.GetBestBTCSellPrice(); //SELL price
+            
+            //TODO: make sure price isn't rediculous - like way above 24 hour avg
+            
+            BigDecimal sizeInBtc = coinAmountToPurchase.setScale(8, RoundingMode.HALF_EVEN);
+            
+            BigDecimal pricePerBtc = purchasePrice.setScale(2, RoundingMode.HALF_EVEN);
+            
+            Boolean post_only = false;
+            String clientOid = UUID.randomUUID().toString();
+            String type = "limit";
+            String side = "buy";
+            String product_id = "BTC-USD";
+            String stp = "cb";
+            String funds = "";
+                    
+            CryptomoneyAutotask.logProv.LogMessage("coin size rounded to: " + sizeInBtc);
+            CryptomoneyAutotask.logProv.LogMessage("price rounded to: " + pricePerBtc);
+            
+            NewOrderSingle newOrd = new NewLimitOrderSingle(sizeInBtc, pricePerBtc, post_only, clientOid, type, side, product_id, stp, funds);
+            
+            Order order = CryptomoneyAutotask.app.orderService().createOrder(newOrd); //API CALL
+            this.orders.put(order.getId(), order);
+            CryptomoneyAutotask.logProv.LogMessage("order placed, tracking client_oid: " +  order.getId() + " " + order.toString());
+            //Cbpdca.logProv.LogMessage("order details: " + order.toString());
+                
+            //TODO: also need to verify after it gets filled to decrement allowance
+            
+            //wait a short while then check order status again
+            lsoc.library.utilities.Sleep.Sleep(200);
+            ProcessBTCBuyOrders(false);
+            
+            return order;
+        }
+        else
+        {
+            CryptomoneyAutotask.logProv.LogException(new Exception("not implemented buyBTC " + this.exchangeType.toString()));
+            System.exit(1);
+        }
+        
+        CryptomoneyAutotask.logProv.LogException(new Exception("unexpected result in buyBTCPostOnly"));
+        return null;
+    }
+    
     /**
      * CALLS API
      */
-    public void buyBTCPostOnly(double coinAmountToPurchase)
+    public Order buyBTCPostOnly(BigDecimal coinAmountToPurchase)
     {
         if(this.exchangeType == ExchangeType.CoinbasePro)
         {
@@ -315,12 +360,14 @@ public class ExchangeAccount
             
             CryptomoneyAutotask.logProv.LogMessage("do buy quantity: " + coinAmountToPurchase);
             
-            double purchasePrice = 3100.01; //TODO: IMPORTANT!: match one of the existing buy prices and use that.
+            //double purchasePrice = 3100.01; //TODO: IMPORTANT!: match one of the existing buy prices and use that.
+            BigDecimal purchasePrice = SharedFunctions.GetBestBTCBuyPrice();
             
+            //TODO: make sure price isn't rediculous - like way above 24 hour avg
             
-            BigDecimal sizeInBtc = BigDecimal.valueOf(coinAmountToPurchase).setScale(8, RoundingMode.HALF_EVEN);
+            BigDecimal sizeInBtc = coinAmountToPurchase.setScale(8, RoundingMode.HALF_EVEN);
             
-            BigDecimal pricePerBtc = BigDecimal.valueOf(purchasePrice).setScale(2, RoundingMode.HALF_EVEN);
+            BigDecimal pricePerBtc = purchasePrice.setScale(2, RoundingMode.HALF_EVEN);
             
             Boolean post_only = true; //note: this makes it so it won't execute the order immediately (might even cancel it), instead go to order book.  No fees for this!
             String clientOid = UUID.randomUUID().toString();
@@ -335,35 +382,43 @@ public class ExchangeAccount
             
             NewOrderSingle newOrd = new NewLimitOrderSingle(sizeInBtc, pricePerBtc, post_only, clientOid, type, side, product_id, stp, funds);
             
+            if(newOrd == null)
+            {
+                CryptomoneyAutotask.logProv.LogException(new Exception("NewOrderSingle null, shouldn't be!"));
+                CryptomoneyAutotask.logProvFile.LogException(new Exception("NewOrderSingle null, shouldn't be!"));
+                return null;
+            }
             
-            /*
-            OrderBuilder newOrdBuild = new OrderBuilder().setId(clientOid).setSide(side).setProduct_id(product_id).setSize(sizeInBtc.toString()).setPrice(pricePerBtc.toString());
-            Order newOrder = newOrdBuild.build();
-            newOrder.setPost_only(post_only.toString());
-            newOrder.setType(type);
-            newOrder.setStp(stp);
-            */          
-                    
-            Order order = CryptomoneyAutotask.app.orderService().createOrder(newOrd); //this places order!
+            Order order = CryptomoneyAutotask.app.orderService().createOrder(newOrd); //API CALL
+            
+            if(order == null)
+            {
+                String logInfo = "order respons is null, order probably failed";
+                CryptomoneyAutotask.logProv.LogMessage(logInfo);
+                CryptomoneyAutotask.logProvFile.LogMessage(logInfo);
+                return null;
+            }
+            
             this.orders.put(order.getId(), order);
             CryptomoneyAutotask.logProv.LogMessage("order placed, tracking client_oid: " +  order.getId() + " " + order.toString());
             //Cbpdca.logProv.LogMessage("order details: " + order.toString());
                 
-            double estimatedUSDToSpend = coinAmountToPurchase*purchasePrice;
-            this.allowanceBuyBTCinUSD-=estimatedUSDToSpend;
             //TODO: also need to verify after it gets filled to decrement allowance
             
             //wait a short while then check order status again
             lsoc.library.utilities.Sleep.Sleep(200);
             ProcessBTCBuyOrders(false);
             
-            
+            return order;
         }
         else
         {
             CryptomoneyAutotask.logProv.LogException(new Exception("not implemented buyBTC " + this.exchangeType.toString()));
             System.exit(1);
         }
+        
+        CryptomoneyAutotask.logProv.LogException(new Exception("unexpected result in buyBTCPostOnly"));
+        return null;
     }
 
 

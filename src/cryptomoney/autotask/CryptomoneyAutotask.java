@@ -44,6 +44,7 @@ import com.coinbase.exchange.api.marketdata.MarketDataService;
 import com.coinbase.exchange.api.payments.PaymentService;
 import com.coinbase.exchange.api.exchange.GdaxExchangeImpl;
 import com.coinbase.exchange.api.config.GdaxConfiguration;
+import cryptomoney.autotask.functions.SharedFunctions;
 
 /**
  *
@@ -62,8 +63,10 @@ public class CryptomoneyAutotask
     public static MarketDataService marketDataService;
     
     public static ILoggingProvider logProv = new LoggingProviderSimple();
+    public static ILoggingProvider logProvFile;
     public static int iterationIntervalMS = 1000*5;
     public static DecimalFormat btcFormat = new DecimalFormat("#0.00000000");
+    public static DecimalFormat usdFormat = new DecimalFormat("#0.00");
     
     public static double BTC_PRICE_MIN_REALISTIC = 1000;
     public static double BTC_PRICE_MAX_REALISTIC = 15000; //todo: may need to change this in the future
@@ -75,52 +78,76 @@ public class CryptomoneyAutotask
     
     public static void main(String[] args)
     { 
-        CryptomoneyAutotask.logProv.LogMessage("version 0.07");
-        
-        if(args.length < 4)
+        try
         {
-            String argMessage = "4 args are required:"
-                    + "\n" +"apiPubKey"
-                    + "\n" + "apiSecretKey"
-                    + "\n" + "apiPassphrase"
-                    + "\n" + "apiBaseURL"
-                    + "\n" + "bExecuteImmediately (1 or 0)";
-            System.out.println(argMessage);
-            CryptomoneyAutotask.logProv.LogMessage(argMessage);    
+            String version = "0.10";
+            CryptomoneyAutotask.logProv.LogMessage("version "+version);
             
+
+            try
+            {
+                logProvFile = new LoggingProviderFlatFile("CryptomoneyAutotask");
+            }
+            catch(Exception ex)
+            {
+                logProv.LogException(ex);
+                System.exit(1);
+            }
+            CryptomoneyAutotask.logProvFile.LogMessage("version "+version);
+            
+
+            CryptomoneyAutotask.logProvFile.LogMessage("program starting");
+
+            if(args.length < 4)
+            {
+                String argMessage = "4 args are required:"
+                        + "\n" +"apiPubKey"
+                        + "\n" + "apiSecretKey"
+                        + "\n" + "apiPassphrase"
+                        + "\n" + "apiBaseURL"
+                        + "\n" + "bExecuteImmediately (1 or 0)";
+                System.out.println(argMessage);
+                CryptomoneyAutotask.logProv.LogMessage(argMessage);    
+
+                System.exit(1);
+            }
+
+            Signature sig = new Signature(args[1]);
+
+            exchange = new GdaxExchangeImpl(args[0], args[2], args[3], sig);
+            orderService = new OrderService(exchange);
+            accountService = new AccountService(exchange);
+            withdrawalsService = new WithdrawalsService(exchange);
+            paymentService = new PaymentService(exchange);
+            depositService = new DepositService(exchange);
+            marketDataService = new MarketDataService(exchange);
+
+
+            int intExecuteImmediately = Integer.parseInt(args[4]);
+            boolean executeImmediately = false;
+            if(intExecuteImmediately == 0)
+            {
+                executeImmediately = false;
+            }
+            else if(intExecuteImmediately == 1)
+            {
+                executeImmediately = true;
+            }
+            else
+            {
+                CryptomoneyAutotask.logProv.LogMessage("bExecuteImmediately  arg[4] must be 1 or 0 (true of false)");
+                System.exit(1);
+            }
+
+            
+            app = new Autotask(executeImmediately);
+            app.Run();
+        }
+        catch(Exception ex)
+        {
+            CryptomoneyAutotask.logProv.LogException(ex);
+            CryptomoneyAutotask.logProvFile.LogException(ex);
             System.exit(1);
         }
-        
-        Signature sig = new Signature(args[1]);
-                
-        exchange = new GdaxExchangeImpl(args[0], args[2], args[3], sig);
-        orderService = new OrderService(exchange);
-        accountService = new AccountService(exchange);
-        withdrawalsService = new WithdrawalsService(exchange);
-        paymentService = new PaymentService(exchange);
-        depositService = new DepositService(exchange);
-        marketDataService = new MarketDataService(exchange);
-        
-        
-        int intExecuteImmediately = Integer.parseInt(args[4]);
-        boolean executeImmediately = false;
-        if(intExecuteImmediately == 0)
-        {
-            executeImmediately = false;
-        }
-        else if(intExecuteImmediately == 1)
-        {
-            executeImmediately = true;
-        }
-        else
-        {
-            CryptomoneyAutotask.logProv.LogMessage("bExecuteImmediately  arg[4] must be 1 or 0 (true of false)");
-            System.exit(1);
-        }
-        
-        
-        app = new Autotask(executeImmediately);
-        app.Run();
-        
     }
 }

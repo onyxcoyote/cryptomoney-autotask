@@ -22,6 +22,8 @@ import cryptomoney.autotask.CryptomoneyAutotask;
 import java.math.BigDecimal;
 import java.util.Random;
 
+import lsoc.library.providers.logging.ILoggingProvider;
+
 /**
  *
  * @author onyxcoyote <no-reply@onyxcoyote.com>
@@ -43,21 +45,58 @@ public class SharedFunctions
         return num;
     }
     
-    public static boolean RollDie(double percentChangeBetween0and1)
+    public static boolean RollDie(double percentChangeBetween0and1, ILoggingProvider logProv)
     {
         Random random = new Random();
         
         int num = random.nextInt(100)+1;
+    
+        double numPct = num/100.0;
         
-        if(num <= percentChangeBetween0and1)
+        
+        if(numPct <= percentChangeBetween0and1)
         {
+            logProv.LogMessage("rolldie: " + numPct + "/" + percentChangeBetween0and1 + "=true");
             return true;
         }
         else
         {
+            logProv.LogMessage("rolldie: " + numPct + "/" + percentChangeBetween0and1 + "=false");
             return false;
         }
         
+    }
+    
+    public static BigDecimal GetBestBTCSellPrice()
+    {
+        BigDecimal btcPrice = null;
+        int level = 1; //level 1 is only the best bid and ask
+        MarketData marketData = CryptomoneyAutotask.marketDataService.getMarketDataOrderBook("BTC-USD", Integer.toString(level));
+        for(OrderItem orderItem : marketData.getAsks()) //ask = sell offer
+        {
+            //level 1 should only return 1 item
+            btcPrice = orderItem.getPrice();
+        }
+        
+        if(btcPrice == null)
+        {
+            CryptomoneyAutotask.logProv.LogMessage("btc price cannot be null");
+            System.exit(1); //don't know what else to do
+        }
+        
+        if(btcPrice.doubleValue() < CryptomoneyAutotask.BTC_PRICE_MIN_REALISTIC)
+        {
+            CryptomoneyAutotask.logProv.LogMessage("btc price cannot exceed min realistic");
+            System.exit(1); //this means a hard-coded change is needed
+        }
+        
+        if(btcPrice.doubleValue() > CryptomoneyAutotask.BTC_PRICE_MAX_REALISTIC)
+        {
+            CryptomoneyAutotask.logProv.LogMessage("btc price cannot exceed max realistic");
+            System.exit(1); //this means a hard-coded change is needed
+        }
+        
+        return btcPrice;
     }
     
     public static BigDecimal GetBestBTCBuyPrice()
@@ -83,9 +122,9 @@ public class SharedFunctions
             System.exit(1); //this means a hard-coded change is needed
         }
         
-        if(btcPrice.doubleValue() < CryptomoneyAutotask.BTC_PRICE_MAX_REALISTIC)
+        if(btcPrice.doubleValue() > CryptomoneyAutotask.BTC_PRICE_MAX_REALISTIC)
         {
-            CryptomoneyAutotask.logProv.LogMessage("btc price cannot exceed min realistic");
+            CryptomoneyAutotask.logProv.LogMessage("btc price cannot exceed max realistic");
             System.exit(1); //this means a hard-coded change is needed
         }
         

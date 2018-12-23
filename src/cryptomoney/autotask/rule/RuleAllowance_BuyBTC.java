@@ -17,6 +17,7 @@
 package cryptomoney.autotask.rule;
 
 import cryptomoney.autotask.CryptomoneyAutotask;
+import java.math.BigDecimal;
 
 /**
  *
@@ -39,25 +40,26 @@ public class RuleAllowance_BuyBTC extends Rule
         
         if(_executeImmediately)
         {
-            this.account.addAllowanceBuyBTCinUSD(amountPerDayUSD); //A FULL DAY'S AMOUNT
+            this.account.allowanceBuyBTCinUSD.addToAllowance(BigDecimal.valueOf(amountPerDayUSD)); //A FULL DAY'S AMOUNT
         }
+        
+        CryptomoneyAutotask.logProv.LogMessage("CREATED actiontype: " + getActionType().toString() + " current amount: " + this.account.allowanceBuyBTCinUSD.getAllowance().doubleValue());      
     }
     
     @Override
     public void doAction()
     {
-        CryptomoneyAutotask.logProv.LogMessage(getHelpString());
+        //CryptomoneyAutotask.logProv.LogMessage(getHelpString());
         
         int msPerDay = 1000*60*60*24;
         double intervalsPerDay =  msPerDay / CryptomoneyAutotask.iterationIntervalMS;
         
         double amountPerIntervalUSD = amountPerDayUSD / intervalsPerDay;
-        CryptomoneyAutotask.logProv.LogMessage("actiontype: " + getActionType().toString() + " amount/interval: " + amountPerIntervalUSD);      
         
-        this.account.addAllowanceBuyBTCinUSD(amountPerIntervalUSD);
-        CryptomoneyAutotask.logProv.LogMessage("new allowanceBuyBTCinUSD: " + account.getAllowanceBuyBTCinUSD());     
+        this.account.allowanceBuyBTCinUSD.addToAllowance(BigDecimal.valueOf(amountPerIntervalUSD));
+        CryptomoneyAutotask.logProv.LogMessage("STATUS actiontype: " + getActionType().toString() + " new allowanceBuyBTCinUSD: " + account.allowanceBuyBTCinUSD.getAllowance());     
         
-        CryptomoneyAutotask.logProv.LogMessage("");
+        //CryptomoneyAutotask.logProv.LogMessage("");
     }
     
     @Override

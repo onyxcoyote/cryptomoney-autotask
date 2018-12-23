@@ -14,25 +14,38 @@
     You should have received a copy of the GNU General Public License
     along with cryptomoney-autotask.  If not, see <https://www.gnu.org/licenses/>.
  */
-package cryptomoney.autotask.rule;
+package cryptomoney.autotask.allowance;
+
+import java.math.BigDecimal;
+import java.math.BigInteger;
+import java.math.RoundingMode;
 
 /**
  *
  * @author onyxcoyote <no-reply@onyxcoyote.com>
  */
-public enum ActionType
+public class Allowance
 {
-    ALLOWANCE_BUY_BTC,
-    ALLOWANCE_WITHDRAW_BTC_TO_COINBASE,
-    ALLOWANCE_DEPOSIT_USD,
+    private BigDecimal allowanceAmount = new BigDecimal(0.0).setScale(8, RoundingMode.HALF_EVEN);
     
-    ACTION_BUY_BTC_DCA_POSTONLY,
-    ACTION_WITHDRAW_BTC_TO_COINBASE,
-    ACTION_DEPOSIT_USD,
+    public Allowance()
+    {
+        System.err.println("DEBUG: starting value " + allowanceAmount);
+    }
     
-    ACTION_PROCESS_BTC_BUY_POST_ORDERS,
+    public BigDecimal getAllowance()
+    {
+        return allowanceAmount; 
+    }
     
-    ALARM_LOW_USD,
-    ALARM_LOW_BTC,
-    ALARM_ALL_BALANCES
+    public void resetAllowance()
+    {
+        allowanceAmount = new BigDecimal(0.0).setScale(8, RoundingMode.HALF_EVEN);
+    }
+    
+    public void addToAllowance(BigDecimal _amountToAdd)
+    {
+        allowanceAmount = allowanceAmount.add(_amountToAdd);
+    }
+         
 }

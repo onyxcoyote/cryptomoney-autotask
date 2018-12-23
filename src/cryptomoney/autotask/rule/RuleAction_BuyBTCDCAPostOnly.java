@@ -16,9 +16,15 @@
  */
 package cryptomoney.autotask.rule;
 
+import com.coinbase.exchange.api.entity.CryptoPaymentRequest;
+import com.coinbase.exchange.api.orders.*;
+import com.coinbase.exchange.api.accounts.Account;
+
 import cryptomoney.autotask.CryptomoneyAutotask;
 import cryptomoney.autotask.functions.SharedFunctions;
 import java.math.BigDecimal;
+import java.math.BigInteger;
+import java.math.RoundingMode;
 
 /**
  * Dollar cost averaging coinbase pro using post-only method (most complicated but 0% fee)
@@ -33,6 +39,7 @@ public class RuleAction_BuyBTCDCAPostOnly extends Rule
     private double randomChanceToProceed;
     
     private int executionCount = 0; //if we set this to 999999 then it would execute right away upon running program (maybe)
+
     
     public RuleAction_BuyBTCDCAPostOnly()
     {
@@ -40,16 +47,20 @@ public class RuleAction_BuyBTCDCAPostOnly extends Rule
     }
     
     /**
+     * Places buy orders (post-only orders which never execute immediately) based on different intervals:
+     *   1) allowance, wait for enough allowance to build up
+     *   2) ensure a number of doAction executions have occurred (based on an average number per day target)
+     *   3) add a random delay, e.g. 0.15 percent chance to proceed may delay 7 times (5 seconds each)
      * 
      * @param _maximumAvgOccurrencesPerDay
      * @param _minimumQuantityBuyUSD
      * @param _minimumQuantityCoinThreshold
      * @param _maximumQuantityCoin
-     * @param _randomChanceToProceed  decimal between 0 and 1, e.g. 25% change is 0.25
+     * @param _randomChanceToProceed  decimal between 0 and 1, e.g. 25% change is 0.25.  This only delays it until the next INTERVAL (e.g. 5 seconds), not even next execution.  Does not reset any other timers.
      */
     public RuleAction_BuyBTCDCAPostOnly(boolean _executeImmediately, double _maximumAvgOccurrencesPerDay, double _minimumQuantityBuyUSD, double _minimumQuantityCoinThreshold, double _maximumQuantityCoin, double _randomChanceToProceed)
     {
-        super(RuleType.ACTION, ActionType.ACTION_DEPOSIT_USD);
+        super(RuleType.ACTION, ActionType.ACTION_BUY_BTC_DCA_POSTONLY);
         maximumAvgOccurrencesPerDay = _maximumAvgOccurrencesPerDay;
         minimumQuantityBuyUSD = _minimumQuantityBuyUSD;
         minimumQuantityCoinThreshold = _minimumQuantityCoinThreshold;
@@ -58,29 +69,34 @@ public class RuleAction_BuyBTCDCAPostOnly extends Rule
         
         if(_executeImmediately)
         {
-            executionCount = 999999999;
+            executionCount = (int)Math.ceil(getNumberOfExecutionsBeforeExecutingOnce());
         }        
+    }
+    
+    private double getNumberOfExecutionsBeforeExecutingOnce()
+    {
+        double systemExecutionsPerDay = SharedFunctions.GetNumberOfSystemIntervalsPerDay();
+        double numberOfExecutionsBeforeExecutingOnce = systemExecutionsPerDay / maximumAvgOccurrencesPerDay;
+        return numberOfExecutionsBeforeExecutingOnce;
     }
     
     @Override
     public void doAction()
     {
-        CryptomoneyAutotask.logProv.LogMessage(getHelpString());
+        //CryptomoneyAutotask.logProv.LogMessage(getHelpString());
         
         executionCount++;
-        //TODO: MAKE SURE SUFFICIENT BALANCE TO BUY
         
-        if(this.account.getAllowanceBuyBTCinUSD() <= this.minimumQuantityBuyUSD)
+        if(this.account.allowanceBuyBTCinUSD.getAllowance().doubleValue() <= this.minimumQuantityBuyUSD)
         {
-            CryptomoneyAutotask.logProv.LogMessage("coinAmountToPurchaseRough does not exceed this.minimumQuantityCoinThreshold " + this.account.getAllowanceBuyBTCinUSD() + "/" + this.minimumQuantityBuyUSD);
+            CryptomoneyAutotask.logProv.LogMessage(getHelpString() + " coinAmountToPurchaseRough does not exceed this.minimumQuantityCoinThreshold " + this.account.allowanceBuyBTCinUSD.getAllowance().setScale(2, RoundingMode.HALF_EVEN) + "/" + this.minimumQuantityBuyUSD);
             return;
         }
         
         
-        double systemExecutionsPerDay = SharedFunctions.GetNumberOfSystemIntervalsPerDay();
-        double numberOfExecutionsBeforeExecutingOnce = systemExecutionsPerDay / maximumAvgOccurrencesPerDay;
+        double numberOfExecutionsBeforeExecutingOnce = getNumberOfExecutionsBeforeExecutingOnce();
         
-        CryptomoneyAutotask.logProv.LogMessage("execution count: " + executionCount + "/" + numberOfExecutionsBeforeExecutingOnce);
+        CryptomoneyAutotask.logProv.LogMessage(getHelpString() + " execution count: " + executionCount + "/" + numberOfExecutionsBeforeExecutingOnce);
         if(executionCount < numberOfExecutionsBeforeExecutingOnce)
         {
             //keep waiting...
@@ -88,47 +104,118 @@ public class RuleAction_BuyBTCDCAPostOnly extends Rule
         }
         else
         {
-            if(SharedFunctions.RollDie(randomChanceToProceed))
+            if(SharedFunctions.RollDie(randomChanceToProceed, CryptomoneyAutotask.logProv))
             {
-                executionCount = 0;
+                executionCount-=numberOfExecutionsBeforeExecutingOnce;
             }
             else
             {
                 //random wait, don't account for it happening less often, just sometimes don't do it, to make it less predictable for "enemy" bots.
+                CryptomoneyAutotask.logProv.LogMessage("random delay...");
                 return;
             }
         }
         
         
-        BigDecimal BTCPriceInUSD= SharedFunctions.GetBestBTCBuyPrice(); //API call
-        double coinAmountToPurchase = this.account.getAllowanceBuyBTCinUSD()/BTCPriceInUSD.doubleValue();
+        //PROBABLY PROCEEDING WITH BUY
+        
+        BigDecimal BTCPriceInUSD= SharedFunctions.GetBestBTCBuyPrice().setScale(10, RoundingMode.HALF_EVEN); //API call
+        
+        BigDecimal coinAmountToPurchase;
+        if(true) //this is just to reduce scope
+        { 
+            
+            BigDecimal allowance = this.account.allowanceBuyBTCinUSD.getAllowance().setScale(10, RoundingMode.HALF_EVEN);
+            CryptomoneyAutotask.logProv.LogMessage("best BTC buy price: " + BTCPriceInUSD.toString());
+            CryptomoneyAutotask.logProv.LogMessage("allowanceBuyBTCinUSD: " + allowance);
 
+            coinAmountToPurchase = allowance.divide(BTCPriceInUSD, RoundingMode.HALF_EVEN).setScale(8, RoundingMode.HALF_EVEN); //BTC max resolution is .00000001
+        }
         //TODO: sanity check, don't let price be too far above 30 day average (or something).
 
         //todo: setting for max # of orders, currently it only allows 1 because that's a lot easier to track.
 
-        if(coinAmountToPurchase >= this.minimumQuantityCoinThreshold)
+        //TODO: refactor this. can put more logic here, weird logic in exchange account and shaerd functions
+        
+        if(coinAmountToPurchase.doubleValue() >= this.minimumQuantityCoinThreshold)
         {
+            //DEFINITELY PROBABLY PROCEED WITH BUY
+            
+
             
             //todo: do this as a separate action, maybe like a separate rule
             boolean cancelAnyOpenOrders = true;
             boolean changedAllowance = this.account.ProcessBTCBuyOrders(cancelAnyOpenOrders); //API call
             if(changedAllowance) 
             {
-                coinAmountToPurchase = this.account.getAllowanceBuyBTCinUSD()/BTCPriceInUSD.doubleValue(); //temporary, might increase amount to buy if ours was cancelled or only partially filled or something
+
+                
+                BigDecimal allowance = this.account.allowanceBuyBTCinUSD.getAllowance().setScale(10, RoundingMode.HALF_EVEN);
+                coinAmountToPurchase = allowance.divide(
+                        BTCPriceInUSD.setScale(10, RoundingMode.HALF_EVEN), 
+                        RoundingMode.HALF_EVEN
+                    ).setScale(8, RoundingMode.HALF_EVEN); //temporary, might increase amount to buy if ours was cancelled or only partially filled or something
             }
 
-            if(coinAmountToPurchase > maximumQuantityCoin)
+            if(coinAmountToPurchase.doubleValue() > maximumQuantityCoin)
             {
-               coinAmountToPurchase = maximumQuantityCoin;
+               coinAmountToPurchase = BigDecimal.valueOf(maximumQuantityCoin).setScale(8, RoundingMode.HALF_EVEN);
             }
             
-            //EXECUTE BUY
-            CryptomoneyAutotask.logProv.LogMessage("coin amount purchase triggered: " + CryptomoneyAutotask.btcFormat.format(coinAmountToPurchase) + "/" + this.minimumQuantityCoinThreshold);      
-            this.account.buyBTCPostOnly(coinAmountToPurchase); //API call
+            //make sure we have sufficient funds
+            BigDecimal estimatedCostOfBuy = coinAmountToPurchase.multiply(BTCPriceInUSD);
+            estimatedCostOfBuy = estimatedCostOfBuy.multiply(new BigDecimal(1.003));
+            Account usdAcct = this.account.getUSDCoinbaseProAccount();
+            if(usdAcct.getAvailable().doubleValue() < estimatedCostOfBuy.doubleValue()) //asume we might need to pay the 0.3% fee (only in some situations
+            {
+                String logInfo = "insufficient funds to buy, not proceeding " + usdAcct.getAvailable().doubleValue() + " < " + estimatedCostOfBuy.doubleValue();
+                CryptomoneyAutotask.logProv.LogMessage(logInfo);
+                CryptomoneyAutotask.logProvFile.LogMessage(logInfo);
+                return;
+            }
             
-            //purge any extra allowance
-            this.account.resetAllowanceBuyBTCinUSD();
+            
+            //DEFINITELY PROCEEDING WITH BUY
+            
+            Order order = null;
+            if(this.account.btcBuyFrequencyDesperation < this.account.BTC_BUY_FREQUENCY_DESPERATION_THRESHOLD)
+            {
+                //EXECUTE BUY - POST (does not execute immediately
+                CryptomoneyAutotask.logProv.LogMessage("coin amount purchase triggered (post-only): " + CryptomoneyAutotask.btcFormat.format(coinAmountToPurchase) + "/" + this.minimumQuantityCoinThreshold);      
+                order = this.account.buyBTCPostOnly(coinAmountToPurchase); //API call
+            }
+            else
+            {
+                //DESPARATE BUY - BUY IMMEDIATELY (within reason)
+                CryptomoneyAutotask.logProv.LogMessage("coin amount purchase triggered (immediate): " + CryptomoneyAutotask.btcFormat.format(coinAmountToPurchase) + "/" + this.minimumQuantityCoinThreshold);      
+                order = this.account.buyBTCImmediate(coinAmountToPurchase); //API call                
+            }
+            
+            if(order != null)
+            {
+                boolean postOnly = Boolean.parseBoolean(order.getPost_only());
+                String desperationInfo = " desp: " + this.account.btcBuyFrequencyDesperation + "/" + this.account.BTC_BUY_FREQUENCY_DESPERATION_THRESHOLD;
+                String postOnlyInfo = "postType " + (postOnly ? "postonly" : "immediate");
+                String logString = "Placed order " + order.toString() + " " + desperationInfo + " " + postOnlyInfo + " estUsd: " + estimatedCostOfBuy.doubleValue();
+                CryptomoneyAutotask.logProv.LogMessage(logString);
+                CryptomoneyAutotask.logProvFile.LogMessage(logString);
+                this.account.allowanceBuyBTCinUSD.addToAllowance(estimatedCostOfBuy.negate());
+                
+                //purge any extra allowance
+                if(this.account.allowanceBuyBTCinUSD.getAllowance().doubleValue() > 0)
+                {
+                    CryptomoneyAutotask.logProv.LogMessage("purging USD BTC BUY allowance " + this.account.allowanceBuyBTCinUSD.getAllowance());
+                    CryptomoneyAutotask.logProvFile.LogMessage("purging USD BTC BUY allowance " + this.account.allowanceBuyBTCinUSD.getAllowance());
+                    this.account.allowanceBuyBTCinUSD.resetAllowance();
+                }
+            }
+            else
+            {
+                CryptomoneyAutotask.logProv.LogMessage("buy order failed");
+                CryptomoneyAutotask.logProvFile.LogMessage("buy order failed");
+            }
+            
+            
         }
         else
         {

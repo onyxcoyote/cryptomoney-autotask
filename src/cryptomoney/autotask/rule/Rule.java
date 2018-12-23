@@ -63,6 +63,4 @@ public abstract class Rule
 
     public abstract String getHelpString();
 
-    
-    
 }
