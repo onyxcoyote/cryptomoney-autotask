@@ -80,19 +80,19 @@ public class SharedFunctions
         
         if(btcPrice == null)
         {
-            CryptomoneyAutotask.logProv.LogMessage("btc price cannot be null");
+            CryptomoneyAutotask.logMultiplexer.LogMessage("btc price cannot be null");
             System.exit(1); //don't know what else to do
         }
         
         if(btcPrice.doubleValue() < CryptomoneyAutotask.BTC_PRICE_MIN_REALISTIC)
         {
-            CryptomoneyAutotask.logProv.LogMessage("btc price cannot exceed min realistic");
+            CryptomoneyAutotask.logMultiplexer.LogMessage("btc price cannot exceed min realistic");
             System.exit(1); //this means a hard-coded change is needed
         }
         
         if(btcPrice.doubleValue() > CryptomoneyAutotask.BTC_PRICE_MAX_REALISTIC)
         {
-            CryptomoneyAutotask.logProv.LogMessage("btc price cannot exceed max realistic");
+            CryptomoneyAutotask.logMultiplexer.LogMessage("btc price cannot exceed max realistic");
             System.exit(1); //this means a hard-coded change is needed
         }
         
@@ -112,19 +112,19 @@ public class SharedFunctions
         
         if(btcPrice == null)
         {
-            CryptomoneyAutotask.logProv.LogMessage("btc price cannot be null");
+            CryptomoneyAutotask.logMultiplexer.LogMessage("btc price cannot be null");
             System.exit(1); //don't know what else to do
         }
         
         if(btcPrice.doubleValue() < CryptomoneyAutotask.BTC_PRICE_MIN_REALISTIC)
         {
-            CryptomoneyAutotask.logProv.LogMessage("btc price cannot exceed min realistic");
+            CryptomoneyAutotask.logMultiplexer.LogMessage("btc price cannot exceed min realistic");
             System.exit(1); //this means a hard-coded change is needed
         }
         
         if(btcPrice.doubleValue() > CryptomoneyAutotask.BTC_PRICE_MAX_REALISTIC)
         {
-            CryptomoneyAutotask.logProv.LogMessage("btc price cannot exceed max realistic");
+            CryptomoneyAutotask.logMultiplexer.LogMessage("btc price cannot exceed max realistic");
             System.exit(1); //this means a hard-coded change is needed
         }
         

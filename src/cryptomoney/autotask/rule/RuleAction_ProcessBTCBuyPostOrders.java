@@ -42,10 +42,6 @@ public class RuleAction_ProcessBTCBuyPostOrders extends Rule
     /**
      * 
      * @param _maximumAvgOccurrencesPerDay
-     * @param _minimumQuantityBuyUSD
-     * @param _minimumQuantityCoinThreshold
-     * @param _maximumQuantityCoin
-     * @param _randomChanceToProceed  decimal between 0 and 1, e.g. 25% change is 0.25
      */
     public RuleAction_ProcessBTCBuyPostOrders(boolean _executeImmediately, double _maximumAvgOccurrencesPerDay)
     {
@@ -91,6 +87,14 @@ public class RuleAction_ProcessBTCBuyPostOrders extends Rule
         {
             executionCount-=numberOfExecutionsBeforeExecutingOnce;
             
+            for(int i=0;i<100 && executionCount > numberOfExecutionsBeforeExecutingOnce;i++)
+            {
+                if(executionCount > numberOfExecutionsBeforeExecutingOnce)
+                {
+                    executionCount-=numberOfExecutionsBeforeExecutingOnce; //don't let it run a bunch of times in a row
+                }
+            }
+            
         }
         
         this.account.ProcessBTCBuyOrders(false);
@@ -101,6 +105,7 @@ public class RuleAction_ProcessBTCBuyPostOrders extends Rule
     @Override
     public String getHelpString()
     {
-        return this.getRuleType() + " " + this.getActionType() + "";
+        return this.getRuleType() + " " + this.getActionType() 
+                + " maximumAvgOccurrencesPerDay:" + maximumAvgOccurrencesPerDay;
     }
 }

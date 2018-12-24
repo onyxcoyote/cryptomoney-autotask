@@ -17,11 +17,13 @@
 package cryptomoney.autotask.rule;
 
 import com.coinbase.exchange.api.accounts.Account;
-import cryptomoney.autotask.CryptomoneyAutotask;
+import com.coinbase.exchange.api.orders.Order;
+import com.coinbase.exchange.api.accounts.Account;
+import com.coinbase.exchange.api.payments.CoinbaseAccount;
 import com.coinbase.exchange.api.payments.PaymentType;
-import com.coinbase.exchange.api.entity.PaymentResponse;
+
+import cryptomoney.autotask.CryptomoneyAutotask;
 import cryptomoney.autotask.functions.SharedFunctions;
-import java.util.List;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 
@@ -29,30 +31,31 @@ import java.math.RoundingMode;
  *
  * @author onyxcoyote <no-reply@onyxcoyote.com>
  */
-public class RuleAction_DepositUSD extends Rule
+public class RuleAlarm_PrintBalance extends Rule
 {
     private double maximumAvgOccurrencesPerDay;
-    private double minimumUSDQuantityThreshold;
-    private double maximumUSDQuantity;
     
     private int executionCount = 0; //if we set this to 999999 then it would execute right away upon running program (maybe)
+
     
-    public RuleAction_DepositUSD()
+    public RuleAlarm_PrintBalance()
     {
-        super(RuleType.ACTION, ActionType.ACTION_DEPOSIT_USD);
+        super(RuleType.ALARM, ActionType.ALARM_PRINT_BALANCE);
     }
     
-    public RuleAction_DepositUSD(boolean _executeImmediately, double _maximumAvgOccurrencesPerDay, double _minimumUSDQuantityThreshold, double _maximumUSDQuantity)
+    /**
+     * 
+     * @param _maximumAvgOccurrencesPerDay
+     */
+    public RuleAlarm_PrintBalance(boolean _executeImmediately, double _maximumAvgOccurrencesPerDay)
     {
-        super(RuleType.ACTION, ActionType.ACTION_DEPOSIT_USD);
+        super(RuleType.ALARM, ActionType.ALARM_PRINT_BALANCE);
         maximumAvgOccurrencesPerDay = _maximumAvgOccurrencesPerDay;
-        minimumUSDQuantityThreshold = _minimumUSDQuantityThreshold;
-        maximumUSDQuantity = _maximumUSDQuantity;
         
         if(_executeImmediately)
         {
             executionCount = (int)Math.ceil(getNumberOfExecutionsBeforeExecutingOnce());
-        }
+        }        
     }
     
     private double getNumberOfExecutionsBeforeExecutingOnce()
@@ -69,22 +72,13 @@ public class RuleAction_DepositUSD extends Rule
         
         executionCount++;
         
-
-        
-        if(this.account.allowanceDepositUSD.getAllowance().doubleValue() < minimumUSDQuantityThreshold)
-        {
-            CryptomoneyAutotask.logProv.LogMessage(getHelpString() + " account.getAllowanceDepositUSD() does not exceed minimumUSDQuantityThreshold " + this.account.allowanceDepositUSD.getAllowance() + "/" + minimumUSDQuantityThreshold);
-            return;
-        }
-
-
-        
         double numberOfExecutionsBeforeExecutingOnce = getNumberOfExecutionsBeforeExecutingOnce();
         
         CryptomoneyAutotask.logProv.LogMessage(getHelpString() + " execution count: " + executionCount + "/" + numberOfExecutionsBeforeExecutingOnce);
         if(executionCount < numberOfExecutionsBeforeExecutingOnce)
         {
-            return; //keep waiting...
+            //keep waiting...
+            return;
         }
         else
         {
@@ -97,52 +91,45 @@ public class RuleAction_DepositUSD extends Rule
                     executionCount-=numberOfExecutionsBeforeExecutingOnce; //don't let it run a bunch of times in a row
                 }
             }
+            
         }
         
         
-        
-        BigDecimal amountToDeposit = this.account.allowanceDepositUSD.getAllowance();
-        if(amountToDeposit.doubleValue() > maximumUSDQuantity)
+        if(this.account.isHas_coinbaseProBTCAccountId())
         {
-           BigDecimal amountAboveMax = amountToDeposit.subtract(BigDecimal.valueOf(maximumUSDQuantity));
-           amountToDeposit = amountToDeposit.subtract(amountAboveMax);
+            Account acct = this.account.getCoinbaseProBTCAccount();
+            CryptomoneyAutotask.logMultiplexer.LogMessage("Coinbase PRO " + acct.getCurrency() + " " + acct.getAvailable() + " " + acct.getBalance());
         }
-
-        String paymentTypeBank_Id = this.account.getCoinbaseProUSDBankPaymentType_Id();
         
-        if(paymentTypeBank_Id == null)
+        if(this.account.isHas_coinbaseProUSDAccountId())
         {
-            CryptomoneyAutotask.logMultiplexer.LogMessage("ERROR, NO BANK PAYMENT TYPE FOUND");
-            System.exit(1);
+            Account acct = this.account.getCoinbaseProUSDAccount();
+            CryptomoneyAutotask.logMultiplexer.LogMessage("Coinbase PRO " + acct.getCurrency() + " " + acct.getAvailable() + " " + acct.getBalance());
         }
         
-        
-        
-        
-        BigDecimal depositAboutBD = amountToDeposit.setScale(2, RoundingMode.HALF_EVEN);
-        PaymentResponse response = CryptomoneyAutotask.depositService.depositViaPaymentMethod(depositAboutBD, "USD", paymentTypeBank_Id); //API CALL
-        CryptomoneyAutotask.logMultiplexer.LogMessage("Requested USD deposit, response: " + response.getCurrency() + " " + response.getAmount() + " " + response.getPayout_at());
-        this.account.allowanceDepositUSD.addToAllowance(amountToDeposit.negate());
-        
-        //purge any extra allowance
-        if(this.account.allowanceDepositUSD.getAllowance().doubleValue() > 0)
+        /*if(this.account.isHas_coinbaseProUSDBankPaymentTypeId())
         {
-            CryptomoneyAutotask.logMultiplexer.LogMessage("purging USD deposit allowance " + this.account.allowanceDepositUSD.getAllowance());
-            this.account.allowanceDepositUSD.resetAllowance();
+            //nothing to display
+            //String acct_id = this.account.getCoinbaseProUSDBankPaymentType_Id();
+            //CryptomoneyAutotask.logMultiplexer.LogMessage(acct.getCurrency() + " " + acct.getAvailable() + " " + acct.getBalance());
+        }*/
+        
+        if(this.account.isHas_coinbaseRegularBTCAccountId())
+        {
+            String account_id = this.account.getCoinbaseRegularBTCAccount_Id();
+            CoinbaseAccount acct = this.account.getCoinbaseRegularBTCAccountById(account_id);
+            CryptomoneyAutotask.logMultiplexer.LogMessage("Coinbase (regular) " + acct.getCurrency() + " " + acct.getBalance());
         }
+        
         
         
         CryptomoneyAutotask.logProv.LogMessage("");
     }
-    
+            
     @Override
     public String getHelpString()
     {
         return this.getRuleType() + " " + this.getActionType() 
-            + " maximumAvgOccurrencesPerDay:" + maximumAvgOccurrencesPerDay
-            + " minimumUSDQuantityThreshold:" + minimumUSDQuantityThreshold
-            + " maximumUSDQuantity:" + maximumUSDQuantity
-                ;
+                + " maximumAvgOccurrencesPerDay:" + maximumAvgOccurrencesPerDay;
     }
 }
-

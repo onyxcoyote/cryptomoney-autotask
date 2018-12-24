@@ -92,29 +92,26 @@ public class RuleAction_WithdrawBTCToCoinbase extends Rule
         else
         {
             executionCount-=numberOfExecutionsBeforeExecutingOnce;
+            
+            for(int i=0;i<100 && executionCount > numberOfExecutionsBeforeExecutingOnce;i++)
+            {
+                if(executionCount > numberOfExecutionsBeforeExecutingOnce)
+                {
+                    executionCount-=numberOfExecutionsBeforeExecutingOnce; //don't let it run a bunch of times in a row
+                }
+            }
         }
         
         
         
         BigDecimal btcPrice = SharedFunctions.GetBestBTCBuyPrice();
         
-        //todo: only get the specific account needed
-        List<Account> accounts = CryptomoneyAutotask.accountService.getAccounts();
-        CryptomoneyAutotask.logProv.LogMessage("retrieved coinbase PRO accounts, count: "+accounts.size());
+        Account btcAccount = this.account.getCoinbaseProBTCAccount();
         
-        Account btcAccount = null;
-        for(Account acct : accounts)
+        if(btcAccount == null)
         {
-            CryptomoneyAutotask.logProv.LogMessage("CPB account retrieved: " + acct.getId() + " " + acct.getCurrency() + " " + acct.getAvailable() + "/" + acct.getBalance());
-            if(acct.getCurrency().equals("BTC"))
-            {
-                if(btcAccount != null)
-                {
-                    CryptomoneyAutotask.logProv.LogMessage("ERROR, TWO BTC ACCOUNTS FOUND WHEN EXPECTINE ONE, EXITING"); //todo: test this to make sure there would only be one account
-                    System.exit(1);
-                }
-                btcAccount = acct;
-            }
+            CryptomoneyAutotask.logMultiplexer.LogMessage("ERROR, NO BTC ACCOUNT FOUND");
+            System.exit(1);
         }
         
         double usdBalanceValueOfBTCInCoinbasePRO = 0;
@@ -129,71 +126,62 @@ public class RuleAction_WithdrawBTCToCoinbase extends Rule
         
         if(valBtcAvail > 0)
         {
-            if(usdBalanceValueOfBTCInCoinbasePRO >= minimumUSDQuantityThreshold)
-
-            CryptomoneyAutotask.logProv.LogMessage("actiontype: " + getActionType().toString());
-
-            double btcToWithdraw = valBtcAvail;
-            if(btcToWithdraw > maximumUSDQuantity)
-            {
-                btcToWithdraw = maximumUSDQuantity;
-            }
-
-            List<CoinbaseAccount> coinbaseAccounts = CryptomoneyAutotask.paymentService.getCoinbaseAccounts(); //optional: instead of this get the id somehow else and code it into config?
-            CryptomoneyAutotask.logProv.LogMessage("retrieved coinbase accounts, count: "+coinbaseAccounts.size());
             
-            CoinbaseAccount btcCoinbaseAccount = null;
-            for(CoinbaseAccount coinbaseAccount : coinbaseAccounts)
+            if(usdBalanceValueOfBTCInCoinbasePRO >= minimumUSDQuantityThreshold)
             {
-                CryptomoneyAutotask.logProv.LogMessage("coinbase account retrieved: " + coinbaseAccount.getId() + " " + 
-                        coinbaseAccount.getCurrency() + " " + 
-                        coinbaseAccount.getType() + " " + 
-                        coinbaseAccount.getPrimary() + " " + 
-                        coinbaseAccount.getBalance() + " " + 
-                        coinbaseAccount.getName()
-                        );
-                if(coinbaseAccount.getCurrency().equals("BTC") && coinbaseAccount.getPrimary())
+
+                CryptomoneyAutotask.logProv.LogMessage("actiontype: " + getActionType().toString());
+
+                BigDecimal btcToWithdraw = this.account.allowanceWithdrawBTCToCoinbaseInUSD.getAllowance().divide(btcPrice, 8, RoundingMode.HALF_EVEN);
+
+                //withdraw less if we have less available
+                if(btcToWithdraw.doubleValue() > valBtcAvail)
                 {
-                    if(btcCoinbaseAccount != null)
-                    {
-                        CryptomoneyAutotask.logProv.LogMessage("ERROR, TWO -PRIMARY- BTC ACCOUNTS FOUND WHEN EXPECTINE ONE, EXITING"); //todo: test this to make sure there would only be one account
-                            //in this case, I think there COULD be multiple accounts unless the getPrimary() takes care of it
-                        System.exit(1);
-                    }
-                    btcCoinbaseAccount = coinbaseAccount;
+                    btcToWithdraw = new BigDecimal(valBtcAvail).setScale(8, RoundingMode.FLOOR);
+                }
+                
+                double maxBTCwithdrawQuantity = maximumUSDQuantity/btcPrice.doubleValue();
+                
+                //don't withdraw more than the max configured
+                if(btcToWithdraw.doubleValue() > maxBTCwithdrawQuantity)
+                {
+                    btcToWithdraw = new BigDecimal(maxBTCwithdrawQuantity).setScale(8, RoundingMode.FLOOR);
+                }
+
+                String btcCoinbaseAccount_Id = this.account.getCoinbaseRegularBTCAccount_Id();
+
+                if(btcCoinbaseAccount_Id == null)
+                {
+                    CryptomoneyAutotask.logMultiplexer.LogMessage("ERROR BTC coinbase account not found");
+                    System.exit(1);
+                }
+
+                //BigDecimal bdBTCAmountToWithdraw = BigDecimal.valueOf(btcToWithdraw).setScale(8, RoundingMode.HALF_EVEN);
+                BigDecimal estimatedUSDAmountOfWithdrawal = btcToWithdraw.multiply(btcPrice).setScale(2, RoundingMode.HALF_EVEN);
+                
+                PaymentResponse response = CryptomoneyAutotask.withdrawalsService.makeWithdrawalToCoinbase(btcToWithdraw, "BTC", btcCoinbaseAccount_Id); //API CALL
+
+                String logString = "Requested BTC withdrawal, response: " + response.getId() + " " + response.getCurrency() + " " + response.getAmount().doubleValue() + " " + response.getPayout_at() + " estimated USD value: " + estimatedUSDAmountOfWithdrawal;
+                CryptomoneyAutotask.logMultiplexer.LogMessage(logString);
+
+
+                this.account.allowanceWithdrawBTCToCoinbaseInUSD.addToAllowance(estimatedUSDAmountOfWithdrawal.negate());
+
+                //purge any extra allowance
+                if(this.account.allowanceWithdrawBTCToCoinbaseInUSD.getAllowance().doubleValue() > 0)
+                {
+                    CryptomoneyAutotask.logMultiplexer.LogMessage("purging BTC withdraw allowance " + this.account.allowanceWithdrawBTCToCoinbaseInUSD.getAllowance());
+                    this.account.allowanceWithdrawBTCToCoinbaseInUSD.resetAllowance();
                 }
             }
-            
-            if(btcCoinbaseAccount == null)
+            else
             {
-                CryptomoneyAutotask.logProv.LogMessage("ERROR BTC coinbase account not found");
-                System.exit(1);
+                CryptomoneyAutotask.logProv.LogMessage("usdBalanceValueOfBTCInCoinbasePRO less than minimumUSDQuantityThreshold");
             }
-            
-            BigDecimal bdBTCAmountToWithdraw = BigDecimal.valueOf(btcToWithdraw).setScale(8, RoundingMode.HALF_EVEN);
-            
-            PaymentResponse response = CryptomoneyAutotask.withdrawalsService.makeWithdrawalToCoinbase(bdBTCAmountToWithdraw, "BTC", btcCoinbaseAccount.getId()); //API CALL
-            
-            String logString = "Requested BTC withdrawal, response: " + response.getId() + " " + response.getCurrency() + " " + response.getAmount().doubleValue() + " " + response.getPayout_at();
-            CryptomoneyAutotask.logProv.LogMessage(logString);
-            CryptomoneyAutotask.logProvFile.LogMessage(logString);
-            
-            BigDecimal estimatedAmountOfWithDrawal = bdBTCAmountToWithdraw.multiply(btcPrice).setScale(2, RoundingMode.HALF_EVEN);
-            this.account.allowanceWithdrawBTCToCoinbaseInUSD.addToAllowance(estimatedAmountOfWithDrawal.negate());
-                    
-            //purge any extra allowance
-            if(this.account.allowanceWithdrawBTCToCoinbaseInUSD.getAllowance().doubleValue() > 0)
-            {
-                CryptomoneyAutotask.logProv.LogMessage("purging BTC withdraw allowance " + this.account.allowanceWithdrawBTCToCoinbaseInUSD.getAllowance());
-                CryptomoneyAutotask.logProvFile.LogMessage("purging BTC withdraw allowance " + this.account.allowanceWithdrawBTCToCoinbaseInUSD.getAllowance());
-                this.account.allowanceWithdrawBTCToCoinbaseInUSD.resetAllowance();
-            }
-                    
         }
         else
         {
-            CryptomoneyAutotask.logProv.LogMessage("BTC available for withdraw is 0");
-            CryptomoneyAutotask.logProvFile.LogMessage("BTC available for withdraw is 0");
+            CryptomoneyAutotask.logMultiplexer.LogMessage("BTC available for withdraw is 0");
         }
         
         CryptomoneyAutotask.logProv.LogMessage("");
@@ -202,7 +190,11 @@ public class RuleAction_WithdrawBTCToCoinbase extends Rule
     @Override
     public String getHelpString()
     {
-        return this.getRuleType() + " " + this.getActionType() + "";
+        return this.getRuleType() + " " + this.getActionType() 
+            + " maximumAvgOccurrencesPerDay:" + maximumAvgOccurrencesPerDay
+            + " minimumUSDQuantityThreshold:" + minimumUSDQuantityThreshold
+            + " maximumUSDQuantity:" + maximumUSDQuantity
+                ;
     }
 }
 

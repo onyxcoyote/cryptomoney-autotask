@@ -24,6 +24,7 @@ import cryptomoney.autotask.rule.RuleAllowance_WithdrawBTCToCoinbase;
 import cryptomoney.autotask.rule.RuleType;
 import cryptomoney.autotask.rule.*;
 import com.coinbase.exchange.api.orders.OrderService;
+import com.coinbase.exchange.api.accounts.Account;
 import com.coinbase.exchange.api.exchange.GdaxExchangeImpl;
 import com.coinbase.exchange.api.exchange.Signature;
 import java.text.DecimalFormat;
@@ -81,7 +82,7 @@ public class Autotask
     //@Autowired
     public Autotask(boolean _executeImmediately)
     {
-        account1 = new ExchangeAccount();
+        account1 = new ExchangeAccount(); //todo: change this to "BTC"  In case we have other types of accounts running the same API key (like ETH or LTC)
         executeImmediately = _executeImmediately;
     }
     
@@ -97,21 +98,22 @@ public class Autotask
     
     public void Run()
     {
-        Initialize();
+        Initialize(account1);
         
         CancelOpenOrders();
         
         DoMainLoop();
     }
     
-    private void Initialize()
+    private void Initialize(ExchangeAccount _account)
     {
         LoadRuleHelp();
         LoadAccounts();
         LoadRules();
         ValidateRules();
+        TestAccountAPI(_account);
         
-        //todo-low: https://docs.pro.coinbase.com/#get-products min size can change in the future
+        //todo: https://docs.pro.coinbase.com/#get-products min BTC purchase size can change in the future
     }
     
     private void CancelOpenOrders()
@@ -131,6 +133,8 @@ public class Autotask
         availableRules.add(new RuleAllowance_BuyBTC());
         availableRules.add(new RuleAllowance_DepositUSD());
         availableRules.add(new RuleAllowance_WithdrawBTCToCoinbase());
+        
+        availableRules.add(new RuleAlarm_PrintBalance());
               
         for(Rule ruleTemplate : availableRules)
         {
@@ -158,6 +162,8 @@ public class Autotask
         boolean useRule_RuleAction_BuyBTCDCAPostOnly        = true;
         boolean useRule_RuleAction_WithdrawBTCToCoinbase    = true;
         boolean useRule_RuleAction_DepositUSD               = true;
+        
+        boolean useRule_RuleAlarm_PrintBalance              = true;
         
         //ALLOWANCE RULES
         
@@ -192,6 +198,14 @@ public class Autotask
         
         
         //ALARM RULES
+        if(useRule_RuleAlarm_PrintBalance)
+        {
+            double MAX_AVERAGE_ACTIONS_PER_DAY = 4.0; //4 = every ~8 hours
+            RuleAlarm_PrintBalance alarm_printBalance = new RuleAlarm_PrintBalance(
+                executeImmediately,
+                MAX_AVERAGE_ACTIONS_PER_DAY);
+            rules.add(alarm_printBalance);
+        }
         /*
             TO ADD
             -account 1 - ALARM if buy_btc_allowance > $20 and USD balance < $21
@@ -220,7 +234,7 @@ public class Autotask
         {
             //double MAX_AVERAGE_ACTIONS_PER_DAY = 720.0; //stub
             //double MAX_AVERAGE_ACTIONS_PER_DAY = 48.0; //48 = every 30 minutes    CLOSE TO NORMAL TEST
-            double MAX_AVERAGE_ACTIONS_PER_DAY = 1440.0; //TEST RANDOM CHANCE
+            double MAX_AVERAGE_ACTIONS_PER_DAY = 1440.1; //TEST RANDOM CHANCE
             //MAX_AVERAGE_ACTIONS_PER_DAY = 10;
 
             double MIN_USD_BUY_AMOUNT = 5.00;
@@ -242,7 +256,7 @@ public class Autotask
         //account 1 - ACTION withdraw X bitcoin (from coinbase pro) to coinbase account, threshold $20->bitcoin, max $100->bitcoin    
         if(useRule_RuleAction_WithdrawBTCToCoinbase)
         {
-            double MAX_AVERAGE_ACTIONS_PER_DAY = 24.0; //24 = every 60 minutes
+            double MAX_AVERAGE_ACTIONS_PER_DAY = 24.1; //24 = every 60 minutes
             //MAX_AVERAGE_ACTIONS_PER_DAY = 1.0;
 
             //double MINIMUM_AMOUNT_TO_TRANSFER = 20.00; //STUB
@@ -260,7 +274,7 @@ public class Autotask
         //account 1 - ACTION transfer X USD from bank 1, threshold >= $50, max $100
         if(useRule_RuleAction_DepositUSD)
         {
-            double MAX_AVERAGE_ACTIONS_PER_DAY = 4.0; //deposit 4x/day
+            double MAX_AVERAGE_ACTIONS_PER_DAY = 4.1; //deposit 4x/day
             //MAX_AVERAGE_ACTIONS_PER_DAY = 0.5;
 
             double MINIMUM_AMOUNT_TO_DEPOSIT = 20.00; //TEST
@@ -290,23 +304,31 @@ public class Autotask
                 if(ruleTemplate.getRuleType().equals(rule.getRuleType()) &&
                         ruleTemplate.getActionType().equals(rule.getActionType()))
                 {
+                    CryptomoneyAutotask.logMultiplexer.LogMessage("Rule added :"+ rule.getHelpString());
                     valid = true;
                 }
             }
             
             if(!valid)
             {
-                CryptomoneyAutotask.logProv.LogMessage("rule not found " + rule.getRuleType() + " " + rule.getActionType());     
-                CryptomoneyAutotask.logProv.LogMessage("rule validation failed");     
+                CryptomoneyAutotask.logMultiplexer.LogMessage("rule not found " + rule.getRuleType() + " " + rule.getActionType());     
+                CryptomoneyAutotask.logMultiplexer.LogMessage("rule validation failed");     
                 System.exit(1);
             }
         }
         
-        
-        
-        
-        
     }
+    
+    private void TestAccountAPI(ExchangeAccount _acct)
+    {
+        Account testConnection = _acct.getCoinbaseProUSDAccount();
+        if(testConnection == null)
+        {
+            CryptomoneyAutotask.logMultiplexer.LogMessage("Unable to retrieve coinbase pro account, possible problem with authentication. See STDOUT.");  
+            System.exit(1);
+        }
+    }
+
     
     private void DoMainLoop()
     {

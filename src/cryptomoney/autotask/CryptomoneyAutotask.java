@@ -25,6 +25,8 @@ import java.util.HashMap;
 import java.util.ArrayList;
 
 import lsoc.library.providers.logging.*;
+import lsoc.library.providers.logging.ILoggingProvider;
+
 import lsoc.library.utilities.Sleep;
 
 import com.coinbase.exchange.api.*;
@@ -46,6 +48,8 @@ import com.coinbase.exchange.api.exchange.GdaxExchangeImpl;
 import com.coinbase.exchange.api.config.GdaxConfiguration;
 import cryptomoney.autotask.functions.SharedFunctions;
 
+import lsoc.library.settings.FileConfig;
+
 /**
  *
  * @author onyxcoyote <no-reply@onyxcoyote.com>
@@ -63,7 +67,8 @@ public class CryptomoneyAutotask
     public static MarketDataService marketDataService;
     
     public static ILoggingProvider logProv = new LoggingProviderSimple();
-    public static ILoggingProvider logProvFile;
+    private static ILoggingProvider logProvFile;
+    public static ILoggingProvider logMultiplexer;
     public static int iterationIntervalMS = 1000*5;
     public static DecimalFormat btcFormat = new DecimalFormat("#0.00000000");
     public static DecimalFormat usdFormat = new DecimalFormat("#0.00");
@@ -80,41 +85,50 @@ public class CryptomoneyAutotask
     { 
         try
         {
-            String version = "0.10";
-            CryptomoneyAutotask.logProv.LogMessage("version "+version);
-            
+            String version = "0.12";
 
             try
             {
                 logProvFile = new LoggingProviderFlatFile("CryptomoneyAutotask");
+                List<ILoggingProvider> loggingProviders = new ArrayList<>();
+                loggingProviders.add(logProv);
+                loggingProviders.add(logProvFile);
+                
+                logMultiplexer = new LoggingProviderMultiplexer(loggingProviders);
             }
             catch(Exception ex)
             {
                 logProv.LogException(ex);
                 System.exit(1);
             }
-            CryptomoneyAutotask.logProvFile.LogMessage("version "+version);
+            CryptomoneyAutotask.logMultiplexer.LogMessage("version "+version);
             
 
-            CryptomoneyAutotask.logProvFile.LogMessage("program starting");
+            CryptomoneyAutotask.logMultiplexer.LogMessage("program starting");
 
-            if(args.length < 4)
+            //Load config settings
+            FileConfig config = new FileConfig(logProvFile);
+            String apiPubKey = config.getConfigString("api_pub_key");
+            String apiSecretKey = config.getConfigString("api_secret_key");
+            String apiPassphrase = config.getConfigString("api_passphrase");
+            String apiBaseURL = config.getConfigString("api_base_url");
+            String executeImmediately = config.getConfigString("execute_immediately");
+            boolean bExecuteImmediately = Boolean.parseBoolean(executeImmediately); //allow "True"
+            if(!bExecuteImmediately)
             {
-                String argMessage = "4 args are required:"
-                        + "\n" +"apiPubKey"
-                        + "\n" + "apiSecretKey"
-                        + "\n" + "apiPassphrase"
-                        + "\n" + "apiBaseURL"
-                        + "\n" + "bExecuteImmediately (1 or 0)";
-                System.out.println(argMessage);
-                CryptomoneyAutotask.logProv.LogMessage(argMessage);    
-
-                System.exit(1);
+                if(executeImmediately.equals("1")) //also allow "1".  Anything else translates to false
+                {
+                    bExecuteImmediately = true;
+                }
             }
+            
+            logProv.LogMessage("config setting executeImmediately: " + bExecuteImmediately);
 
-            Signature sig = new Signature(args[1]);
+            
+            
+            Signature sig = new Signature(apiSecretKey);
 
-            exchange = new GdaxExchangeImpl(args[0], args[2], args[3], sig);
+            exchange = new GdaxExchangeImpl(apiPubKey, apiPassphrase, apiBaseURL, sig);
             orderService = new OrderService(exchange);
             accountService = new AccountService(exchange);
             withdrawalsService = new WithdrawalsService(exchange);
@@ -122,31 +136,14 @@ public class CryptomoneyAutotask
             depositService = new DepositService(exchange);
             marketDataService = new MarketDataService(exchange);
 
-
-            int intExecuteImmediately = Integer.parseInt(args[4]);
-            boolean executeImmediately = false;
-            if(intExecuteImmediately == 0)
-            {
-                executeImmediately = false;
-            }
-            else if(intExecuteImmediately == 1)
-            {
-                executeImmediately = true;
-            }
-            else
-            {
-                CryptomoneyAutotask.logProv.LogMessage("bExecuteImmediately  arg[4] must be 1 or 0 (true of false)");
-                System.exit(1);
-            }
-
             
-            app = new Autotask(executeImmediately);
+            
+            app = new Autotask(bExecuteImmediately);
             app.Run();
         }
         catch(Exception ex)
         {
-            CryptomoneyAutotask.logProv.LogException(ex);
-            CryptomoneyAutotask.logProvFile.LogException(ex);
+            CryptomoneyAutotask.logMultiplexer.LogException(ex);
             System.exit(1);
         }
     }

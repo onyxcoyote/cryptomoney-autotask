@@ -34,5 +34,5 @@ public enum ActionType
     
     ALARM_LOW_USD,
     ALARM_LOW_BTC,
-    ALARM_ALL_BALANCES
+    ALARM_PRINT_BALANCE
 }

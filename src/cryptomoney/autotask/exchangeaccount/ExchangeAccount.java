@@ -16,7 +16,7 @@
  */
 package cryptomoney.autotask.exchangeaccount;
 
-import com.coinbase.exchange.api.accounts.Account;
+
 import cryptomoney.autotask.CryptomoneyAutotask;
 //import org.springframework.beans.factory.annotation.Autowired;
 //import org.springframework.stereotype.Component;
@@ -25,6 +25,10 @@ import com.coinbase.exchange.api.entity.NewLimitOrderSingle;
 import com.coinbase.exchange.api.orders.*;
 import com.coinbase.exchange.api.entity.NewOrderSingle;
 import com.coinbase.exchange.api.entity.Fill;
+import com.coinbase.exchange.api.accounts.Account;
+import com.coinbase.exchange.api.payments.CoinbaseAccount;
+import com.coinbase.exchange.api.payments.PaymentType;
+import static cryptomoney.autotask.CryptomoneyAutotask.logMultiplexer;
 import java.math.BigDecimal;
 import java.util.UUID;
 import java.util.ArrayList;
@@ -55,6 +59,16 @@ public class ExchangeAccount
     
     public int btcBuyFrequencyDesperation = 0; //todo: can this be refactored, maybe make it an object
     public static final int BTC_BUY_FREQUENCY_DESPERATION_THRESHOLD = 10;
+    
+    private String coinbaseProUSDAccountId = null;
+    private String coinbaseProUSDBankPaymentTypeId = null;
+    private String coinbaseProBTCAccountId = null;
+    private String coinbaseRegularBTCAccountId = null;
+    
+    private boolean has_coinbaseProUSDAccountId = false;
+    private boolean has_coinbaseProUSDBankPaymentTypeId = false;
+    private boolean has_coinbaseProBTCAccountId = false;
+    private boolean has_coinbaseRegularBTCAccountId = false;
             
     public ExchangeAccount()
     {
@@ -71,34 +85,258 @@ public class ExchangeAccount
             return orders.size();
         }
     }
-    
+
     /**
-     * CALLS API
+     * This is needed for informational purposes only.  In most cases, it's only necessary to get the account_id.
      * @return 
      */
-    public Account getUSDCoinbaseProAccount()
+    public CoinbaseAccount getCoinbaseRegularBTCAccountById(String _accountId)
     {
-        //TODO: save the account ID on initial loadand retrieve just the one account instead of all
-        
-        
-        List<Account> accounts = CryptomoneyAutotask.accountService.getAccounts();
-        
-        Account usdAccount = null;
-        for(Account acct : accounts)
+        List<CoinbaseAccount> coinbaseAccounts = CryptomoneyAutotask.paymentService.getCoinbaseAccounts(); //optional: instead of this get the id somehow else and code it into config?
+        CryptomoneyAutotask.logProv.LogMessage("retrieved coinbase accounts, count: "+coinbaseAccounts.size());
+
+        CoinbaseAccount btcCoinbaseAccount = null;
+        for(CoinbaseAccount coinbaseAccount : coinbaseAccounts)
         {
-            CryptomoneyAutotask.logProv.LogMessage("CPB account retrieved: " + acct.getId() + " " + acct.getCurrency() + " " + acct.getAvailable() + "/" + acct.getBalance());
-            if(acct.getCurrency().equals("USD"))
+            CryptomoneyAutotask.logProv.LogMessage("coinbase account retrieved: " + coinbaseAccount.getId() + " " + 
+                    coinbaseAccount.getCurrency() + " " + 
+                    coinbaseAccount.getType() + " " + 
+                    coinbaseAccount.getPrimary() + " " + 
+                    coinbaseAccount.getBalance() + " " + 
+                    coinbaseAccount.getName()
+                    );
+            if(coinbaseAccount.getId().equals(_accountId))
             {
-                if(usdAccount != null)
+                if(btcCoinbaseAccount != null)
                 {
-                    CryptomoneyAutotask.logProv.LogMessage("ERROR, TWO BTC ACCOUNTS FOUND WHEN EXPECTINE ONE, EXITING"); //todo: test this to make sure there would only be one account
+                    CryptomoneyAutotask.logMultiplexer.LogMessage("ERROR, TWO -PRIMARY- BTC ACCOUNTS FOUND WHEN EXPECTINE ONE, EXITING"); //todo: test this to make sure there would only be one account
+                        //in this case, I think there COULD be multiple accounts unless the getPrimary() takes care of it
                     System.exit(1);
                 }
-                usdAccount = acct;
+                btcCoinbaseAccount = coinbaseAccount;
+            }
+        }
+
+        if(btcCoinbaseAccount != null)
+        {
+            CryptomoneyAutotask.logMultiplexer.LogMessage("Unable to get coinbaseRegularBTCAccount. Exiting!");
+            System.exit(1);
+        }
+        else
+        {
+            return btcCoinbaseAccount;
+        }
+        
+        CryptomoneyAutotask.logMultiplexer.LogMessage("Impossible situation getCoinbaseRegularBTCAccountById. Exiting!");
+        System.exit(1);
+        return null; 
+    }
+    
+    /**
+     * API CALL
+     * @return 
+     */
+    public String getCoinbaseRegularBTCAccount_Id()
+    {
+        if(coinbaseRegularBTCAccountId != null)
+        {
+            return coinbaseRegularBTCAccountId;
+        }
+        else
+        {
+            List<CoinbaseAccount> coinbaseAccounts = CryptomoneyAutotask.paymentService.getCoinbaseAccounts(); //optional: instead of this get the id somehow else and code it into config?
+            CryptomoneyAutotask.logProv.LogMessage("retrieved coinbase accounts, count: "+coinbaseAccounts.size());
+
+            CoinbaseAccount btcCoinbaseAccount = null;
+            for(CoinbaseAccount coinbaseAccount : coinbaseAccounts)
+            {
+                CryptomoneyAutotask.logProv.LogMessage("coinbase account retrieved: " + coinbaseAccount.getId() + " " + 
+                        coinbaseAccount.getCurrency() + " " + 
+                        coinbaseAccount.getType() + " " + 
+                        coinbaseAccount.getPrimary() + " " + 
+                        coinbaseAccount.getBalance() + " " + 
+                        coinbaseAccount.getName()
+                        );
+                if(coinbaseAccount.getCurrency().equals("BTC") && coinbaseAccount.getPrimary())
+                {
+                    if(btcCoinbaseAccount != null)
+                    {
+                        CryptomoneyAutotask.logMultiplexer.LogMessage("ERROR, TWO -PRIMARY- BTC ACCOUNTS FOUND WHEN EXPECTINE ONE, EXITING"); //todo: test this to make sure there would only be one account
+                            //in this case, I think there COULD be multiple accounts unless the getPrimary() takes care of it
+                        System.exit(1);
+                    }
+                    btcCoinbaseAccount = coinbaseAccount;
+                }
+            }
+            
+            if(btcCoinbaseAccount == null)
+            {
+                CryptomoneyAutotask.logMultiplexer.LogMessage("Unable to get coinbaseRegularBTCAccount_Id. Exiting!");
+                System.exit(1);
+            }
+            else
+            {
+                this.coinbaseRegularBTCAccountId = btcCoinbaseAccount.getId();
+                this.has_coinbaseRegularBTCAccountId = true;
+                return coinbaseRegularBTCAccountId;
             }
         }
         
-        return usdAccount;
+        CryptomoneyAutotask.logMultiplexer.LogMessage("Impossible situation getCoinbaseRegularBTCAccount_Id. Exiting!");
+        System.exit(1);
+        return null;        
+    }
+    
+    public Account getCoinbaseProBTCAccount()
+    {
+        if(coinbaseProBTCAccountId != null)
+        {
+            Account acct = CryptomoneyAutotask.accountService.getAccount(coinbaseProBTCAccountId);
+            if(acct == null)
+            {
+                this.coinbaseProBTCAccountId = null; //reset, account wasn't found
+            }
+            return acct;
+        }
+        else
+        {
+            List<Account> accounts = CryptomoneyAutotask.accountService.getAccounts();
+            CryptomoneyAutotask.logProv.LogMessage("retrieved coinbase PRO accounts, count: "+accounts.size());
+
+            Account btcAccount = null;
+            for(Account acct : accounts)
+            {
+                CryptomoneyAutotask.logProv.LogMessage("CPB account retrieved: " + acct.getId() + " " + acct.getCurrency() + " " + acct.getAvailable() + "/" + acct.getBalance());
+                if(acct.getCurrency().equals("BTC"))
+                {
+                    if(btcAccount != null)
+                    {
+                        CryptomoneyAutotask.logMultiplexer.LogMessage("ERROR, TWO BTC ACCOUNTS FOUND WHEN EXPECTING ONE, EXITING"); //todo: test this to make sure there would only be one account
+                        System.exit(1);
+                    }
+                    btcAccount = acct;
+                }
+            }
+            
+            if(btcAccount == null)
+            {
+                CryptomoneyAutotask.logMultiplexer.LogMessage("Unable to get getCoinbaseProBTCAccount. Exiting!");
+                System.exit(1);
+            }
+            else
+            {
+                this.coinbaseProBTCAccountId = btcAccount.getId();
+                this.has_coinbaseProBTCAccountId = true;
+                return btcAccount;
+            }
+        }
+                
+        CryptomoneyAutotask.logMultiplexer.LogMessage("Impossible situation getCoinbaseProBTCAccount. Exiting!");
+        System.exit(1);
+        return null;
+    }
+    
+    /**
+     * get unique id representing bank account used to fund coinbase pro
+     * Sometimes API call
+     * @return 
+     */
+    public String getCoinbaseProUSDBankPaymentType_Id()
+    {
+        if(coinbaseProUSDBankPaymentTypeId != null)
+        {
+            return this.coinbaseProUSDBankPaymentTypeId; //only this info is needed usually
+        }
+        else
+        {
+
+            List<PaymentType> paymentTypes = CryptomoneyAutotask.paymentService.getPaymentTypes();
+
+            PaymentType paymentTypeBank = null;
+            for(PaymentType paymentType : paymentTypes)
+            {
+                CryptomoneyAutotask.logProv.LogMessage("paymentType account retrieved: " + paymentType.getAllow_buy() + " " + paymentType.getId() + " " + paymentType.getName() + " " + paymentType.getType()); //todo: keep this, shows last 4 digit bank#?
+                if(paymentType.getCurrency().equals("USD") && paymentType.getPrimary_buy()) //todo: abstract away USD and BTC
+                {
+                    if(paymentTypeBank != null)
+                    {
+                        CryptomoneyAutotask.logProv.LogMessage("ERROR, TWO -PRIMARY BUY- BANK ACCOUNTS FOUND WHEN EXPECTINE ONE, EXITING"); //todo: test this to make sure there would only be one account
+                        System.exit(1);
+                    }
+                    paymentTypeBank = paymentType;
+                }
+            }
+
+
+            if(paymentTypeBank == null)
+            {
+                CryptomoneyAutotask.logMultiplexer.LogMessage("Unable to get getCoinbaseProUSDBankPaymentType_Id. Exiting!");
+                System.exit(1);
+            }
+            else
+            {
+                this.coinbaseProUSDBankPaymentTypeId = paymentTypeBank.getId();
+                this.has_coinbaseProUSDBankPaymentTypeId = true;
+                return paymentTypeBank.getId();
+            }
+        }
+        
+        CryptomoneyAutotask.logMultiplexer.LogMessage("Impossible situation coinbaseProUSDAccount. Exiting!");
+        System.exit(1);
+        return null;
+    }
+    
+    /**
+     * If we know the account ID, retrieve just that one, otherwise retrieve all, find it, and save the account ID for later use.
+     * CALLS API
+     * @return 
+     */
+    public Account getCoinbaseProUSDAccount()
+    {
+        if(coinbaseProUSDAccountId != null)
+        {
+            Account acct = CryptomoneyAutotask.accountService.getAccount(this.coinbaseProUSDAccountId);
+            if(acct == null)
+            {
+                this.coinbaseProUSDAccountId = null; //reset, account wasn't found
+            }
+            return acct;
+        }
+        else
+        {
+            List<Account> accounts = CryptomoneyAutotask.accountService.getAccounts();
+
+            Account usdAccount = null;
+            for(Account acct : accounts)
+            {
+                CryptomoneyAutotask.logProv.LogMessage("CPB account retrieved: " + acct.getId() + " " + acct.getCurrency() + " " + acct.getAvailable() + "/" + acct.getBalance());
+                if(acct.getCurrency().equals("USD"))
+                {
+                    if(usdAccount != null)
+                    {
+                        CryptomoneyAutotask.logMultiplexer.LogMessage("ERROR, TWO BTC ACCOUNTS FOUND WHEN EXPECTINE ONE, EXITING"); //todo: test this to make sure there would only be one account
+                        System.exit(1);
+                    }
+                    usdAccount = acct;
+                }
+            }
+
+            if(usdAccount == null)
+            {
+                CryptomoneyAutotask.logMultiplexer.LogMessage("Unable to get coinbaseProUSDAccount. Exiting!");
+                System.exit(1);
+            }
+            else
+            {
+                this.coinbaseProUSDAccountId = usdAccount.getId();
+                this.has_coinbaseProUSDAccountId = true;
+                return usdAccount;
+            }
+        }
+        
+        CryptomoneyAutotask.logMultiplexer.LogMessage("Impossible situation getUSDCoinbaseProAccount. Exiting!");
+        System.exit(1);
+        return null;
     }
     
     
@@ -187,105 +425,105 @@ public class ExchangeAccount
                 if(ordersToCancel.size() > 0)
                 {
                     CryptomoneyAutotask.logProv.LogMessage("cancelling orders, count: " + ordersToCancel.size());
-                }
                 
-                for(Order orderToCancel : ordersToCancel)
-                {
-                    lsoc.library.utilities.Sleep.Sleep(100); //slow down so we're not querying too fast. this limits it to 10x/second
+                    for(Order orderToCancel : ordersToCancel)
+                    {
+                        lsoc.library.utilities.Sleep.Sleep(100); //slow down so we're not querying too fast. this limits it to 10x/second
 
-                    CryptomoneyAutotask.logProv.LogMessage("submitting cancel for " + orderToCancel.getId());
-                    String response = CryptomoneyAutotask.app.orderService().cancelOrder(orderToCancel.getId()); //API CALL
-                    CryptomoneyAutotask.logProv.LogMessage("Requested order cancel, response: " + response);
-                    CryptomoneyAutotask.logProvFile.LogMessage("Requested order cancel, response: " + response);
-                    //orders.remove(orderToCancel.getId()); //wait until later to verify it's been cancelled ? Or mark it as something we're cancelling?
-                    ordersNotOpen.add(orderToCancel); //assume the cancel was complete
-                    
-                    this.btcBuyFrequencyDesperation++;
-                    CryptomoneyAutotask.logProv.LogMessage("desperation set to: " + this.btcBuyFrequencyDesperation + "/" + this.BTC_BUY_FREQUENCY_DESPERATION_THRESHOLD);      
+                        CryptomoneyAutotask.logProv.LogMessage("submitting cancel for " + orderToCancel.getId());
+                        String response = CryptomoneyAutotask.app.orderService().cancelOrder(orderToCancel.getId()); //API CALL
+                        CryptomoneyAutotask.logMultiplexer.LogMessage("Requested order cancel, response: " + response);
+                        //orders.remove(orderToCancel.getId()); //wait until later to verify it's been cancelled ? Or mark it as something we're cancelling?
+                        ordersNotOpen.add(orderToCancel); //assume the cancel was complete
+
+                        this.btcBuyFrequencyDesperation++;
+                        CryptomoneyAutotask.logProv.LogMessage("desperation set to: " + this.btcBuyFrequencyDesperation + "/" + this.BTC_BUY_FREQUENCY_DESPERATION_THRESHOLD);      
+                    }
                 }
             }
             
             //list of orders probably closed
-            CryptomoneyAutotask.logProv.LogMessage("checking open orders to mark as complete...");
-            for(Order missingOrder : ordersNotOpen)
+            if(ordersNotOpen.size() > 0)
             {
-                lsoc.library.utilities.Sleep.Sleep(100); //slow down so we're not querying too fast. this limits it to 10x/second
-                //this sleep might also give time for any cancel requests to finish
-                
-                //Order actualOrder = Cbpdca.app.orderService().getOrder(missingOrder.getId());
-                //if(actualOrder == null)
-                //{
-                CryptomoneyAutotask.logProv.LogMessage("order was not found: " + missingOrder.getId()); //maybe check fills instead
-
-                boolean orderFound = false;
-                Fill fill = null;
-                
-                int resultLimit = 20;
-                List<Fill> fills = CryptomoneyAutotask.app.orderService().getFillByOrderId(missingOrder.getId(), resultLimit);
-                
-                if(fills.size() > 0)
+                CryptomoneyAutotask.logProv.LogMessage("checking open orders to mark as complete...");
+                for(Order missingOrder : ordersNotOpen)
                 {
-                    for(Fill fillofList : fills)
-                    {
-                        if(missingOrder.getId().equals(fillofList.getOrder_id()))
-                        {
-                            fill = fillofList;
-                            break;
-                        }
-                    }
-                    
-                    if(fill != null)
-                    {
-                        String logString = "fill found: " + fill.getOrder_id() + " " + fill.getSize() + " " + fill.getLiquidity() + " " + fill.getProduct_id() + " " + fill.getSide() + " " + fill.getSettled();
-                        CryptomoneyAutotask.logProv.LogMessage(logString); 
-                        CryptomoneyAutotask.logProvFile.LogMessage(logString); 
-                        orderFound = true;
-                        btcBuyFrequencyDesperation=0; //stub
-                    }
-                }
-                
-                if(!orderFound)
-                {
-                    //we could compare ordersToCancel here
-                    CryptomoneyAutotask.logProv.LogMessage("fill NOT FOUND: " + missingOrder.getId() + " assuming order was cancelled"); 
-                    this.orders.remove(missingOrder.getId());
-                    BigDecimal missingOrderPrice = BigDecimal.valueOf(Double.valueOf(missingOrder.getPrice()));
-                    BigDecimal missingOrderCoinAmount = BigDecimal.valueOf(Double.valueOf(missingOrder.getSize()));
-                    BigDecimal usdValueNotPurchased = missingOrderCoinAmount.multiply(missingOrderPrice);
-                    allowanceBuyBTCinUSD.addToAllowance(usdValueNotPurchased);
-                    madeChanges = true;
-                    lsoc.library.utilities.Sleep.Sleep(200);
-                }
-                else
-                {                  
-                    if(fill.getSettled())
-                    {
-                        //double filledSize = Double.valueOf(actualOrder.getFilled_size());
-                        //double originalSize = Double.valueOf(actualOrder.getSize());
-                        //double missedSize = originalSize - filledSize;
+                    lsoc.library.utilities.Sleep.Sleep(100); //slow down so we're not querying too fast. this limits it to 10x/second
+                    //this sleep might also give time for any cancel requests to finish
 
+                    //Order actualOrder = Cbpdca.app.orderService().getOrder(missingOrder.getId());
+                    //if(actualOrder == null)
+                    //{
+                    CryptomoneyAutotask.logProv.LogMessage("order was not found: " + missingOrder.getId()); //maybe check fills instead
 
-                        //TODO:ASSUMING COMPLETELY FILLED??
-                        double missedSize = 0;
-                        
-                        if(missedSize > 0)
+                    boolean orderFound = false;
+                    Fill fill = null;
+
+                    int resultLimit = 20;
+                    List<Fill> fills = CryptomoneyAutotask.app.orderService().getFillByOrderId(missingOrder.getId(), resultLimit);
+
+                    if(fills.size() > 0)
+                    {
+                        for(Fill fillofList : fills)
                         {
-                            //add it back to allowance
-                            allowanceBuyBTCinUSD.addToAllowance(BigDecimal.valueOf(missedSize));
-                            madeChanges = true;
+                            if(missingOrder.getId().equals(fillofList.getOrder_id()))
+                            {
+                                fill = fillofList;
+                                break;
+                            }
                         }
 
-                        this.orders.remove(missingOrder.getId()); //remove order
-                        CryptomoneyAutotask.logProv.LogMessage("ORDER DONE: " + missingOrder.getId() + " " + missingOrder.toString() + " filled: " + fill.getSize().doubleValue()+ "/" + missingOrder.getSize());
-                        CryptomoneyAutotask.logProvFile.LogMessage("ORDER DONE: " + missingOrder.getId() + " " + missingOrder.toString() + " filled: " + fill.getSize().doubleValue()+ "/" + missingOrder.getSize());
-                        btcBuyFrequencyDesperation=0; //stub
+                        if(fill != null)
+                        {
+                            String logString = "fill found: " + fill.getOrder_id() + " " + fill.getSize() + " " + fill.getLiquidity() + " " + fill.getProduct_id() + " " + fill.getSide() + " " + fill.getSettled();
+                            CryptomoneyAutotask.logMultiplexer.LogMessage(logString); 
+                            orderFound = true;
+                            btcBuyFrequencyDesperation=0; //stub
+                        }
+                    }
+
+                    if(!orderFound)
+                    {
+                        //we could compare ordersToCancel here
+                        CryptomoneyAutotask.logProv.LogMessage("fill NOT FOUND: " + missingOrder.getId() + " assuming order was cancelled"); 
+                        this.orders.remove(missingOrder.getId());
+                        BigDecimal missingOrderPrice = BigDecimal.valueOf(Double.valueOf(missingOrder.getPrice()));
+                        BigDecimal missingOrderCoinAmount = BigDecimal.valueOf(Double.valueOf(missingOrder.getSize()));
+                        BigDecimal usdValueNotPurchased = missingOrderCoinAmount.multiply(missingOrderPrice);
+                        allowanceBuyBTCinUSD.addToAllowance(usdValueNotPurchased);
+                        madeChanges = true;
+                        lsoc.library.utilities.Sleep.Sleep(200);
+                    }
+                    else
+                    {                  
+                        if(fill.getSettled())
+                        {
+                            //double filledSize = Double.valueOf(actualOrder.getFilled_size());
+                            //double originalSize = Double.valueOf(actualOrder.getSize());
+                            //double missedSize = originalSize - filledSize;
+
+
+                            //TODO:ASSUMING COMPLETELY FILLED??
+                            double missedSize = 0;
+
+                            if(missedSize > 0)
+                            {
+                                //add it back to allowance
+                                allowanceBuyBTCinUSD.addToAllowance(BigDecimal.valueOf(missedSize));
+                                madeChanges = true;
+                            }
+
+                            this.orders.remove(missingOrder.getId()); //remove order
+                            CryptomoneyAutotask.logMultiplexer.LogMessage("ORDER DONE: " + missingOrder.getId() + " " + missingOrder.toString() + " filled: " + fill.getSize().doubleValue()+ "/" + missingOrder.getSize());
+                            btcBuyFrequencyDesperation=0; //stub
+                        }
                     }
                 }
             }
         }
         else
         {
-            CryptomoneyAutotask.logProv.LogException(new Exception("not implemented buyBTC " + this.exchangeType.toString()));
+            CryptomoneyAutotask.logMultiplexer.LogException(new Exception("not implemented buyBTC " + this.exchangeType.toString()));
             System.exit(1);
         }
         
@@ -339,11 +577,11 @@ public class ExchangeAccount
         }
         else
         {
-            CryptomoneyAutotask.logProv.LogException(new Exception("not implemented buyBTC " + this.exchangeType.toString()));
+            CryptomoneyAutotask.logMultiplexer.LogException(new Exception("not implemented buyBTC " + this.exchangeType.toString()));
             System.exit(1);
         }
         
-        CryptomoneyAutotask.logProv.LogException(new Exception("unexpected result in buyBTCPostOnly"));
+        CryptomoneyAutotask.logMultiplexer.LogException(new Exception("unexpected result in buyBTCPostOnly"));
         return null;
     }
     
@@ -384,8 +622,7 @@ public class ExchangeAccount
             
             if(newOrd == null)
             {
-                CryptomoneyAutotask.logProv.LogException(new Exception("NewOrderSingle null, shouldn't be!"));
-                CryptomoneyAutotask.logProvFile.LogException(new Exception("NewOrderSingle null, shouldn't be!"));
+                CryptomoneyAutotask.logMultiplexer.LogException(new Exception("NewOrderSingle null, shouldn't be!"));
                 return null;
             }
             
@@ -394,8 +631,7 @@ public class ExchangeAccount
             if(order == null)
             {
                 String logInfo = "order respons is null, order probably failed";
-                CryptomoneyAutotask.logProv.LogMessage(logInfo);
-                CryptomoneyAutotask.logProvFile.LogMessage(logInfo);
+                CryptomoneyAutotask.logMultiplexer.LogMessage(logInfo);
                 return null;
             }
             
@@ -413,12 +649,44 @@ public class ExchangeAccount
         }
         else
         {
-            CryptomoneyAutotask.logProv.LogException(new Exception("not implemented buyBTC " + this.exchangeType.toString()));
+            CryptomoneyAutotask.logMultiplexer.LogException(new Exception("not implemented buyBTC " + this.exchangeType.toString()));
             System.exit(1);
         }
         
-        CryptomoneyAutotask.logProv.LogException(new Exception("unexpected result in buyBTCPostOnly"));
+        CryptomoneyAutotask.logMultiplexer.LogException(new Exception("unexpected result in buyBTCPostOnly"));
         return null;
+    }
+
+    /**
+     * @return the has_coinbaseProUSDAccountId
+     */
+    public boolean isHas_coinbaseProUSDAccountId()
+    {
+        return has_coinbaseProUSDAccountId;
+    }
+
+    /**
+     * @return the has_coinbaseProUSDBankPaymentTypeId
+     */
+    public boolean isHas_coinbaseProUSDBankPaymentTypeId()
+    {
+        return has_coinbaseProUSDBankPaymentTypeId;
+    }
+
+    /**
+     * @return the has_coinbaseProBTCAccountId
+     */
+    public boolean isHas_coinbaseProBTCAccountId()
+    {
+        return has_coinbaseProBTCAccountId;
+    }
+
+    /**
+     * @return the has_coinbaseRegularBTCAccountId
+     */
+    public boolean isHas_coinbaseRegularBTCAccountId()
+    {
+        return has_coinbaseRegularBTCAccountId;
     }
 
 

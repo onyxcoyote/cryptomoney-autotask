@@ -107,6 +107,14 @@ public class RuleAction_BuyBTCDCAPostOnly extends Rule
             if(SharedFunctions.RollDie(randomChanceToProceed, CryptomoneyAutotask.logProv))
             {
                 executionCount-=numberOfExecutionsBeforeExecutingOnce;
+
+                for(int i=0;i<100 && executionCount > numberOfExecutionsBeforeExecutingOnce;i++)
+                {
+                    if(executionCount > numberOfExecutionsBeforeExecutingOnce)
+                    {
+                        executionCount-=numberOfExecutionsBeforeExecutingOnce; //don't let it run a bunch of times in a row
+                    }
+                }
             }
             else
             {
@@ -148,8 +156,6 @@ public class RuleAction_BuyBTCDCAPostOnly extends Rule
             boolean changedAllowance = this.account.ProcessBTCBuyOrders(cancelAnyOpenOrders); //API call
             if(changedAllowance) 
             {
-
-                
                 BigDecimal allowance = this.account.allowanceBuyBTCinUSD.getAllowance().setScale(10, RoundingMode.HALF_EVEN);
                 coinAmountToPurchase = allowance.divide(
                         BTCPriceInUSD.setScale(10, RoundingMode.HALF_EVEN), 
@@ -165,12 +171,11 @@ public class RuleAction_BuyBTCDCAPostOnly extends Rule
             //make sure we have sufficient funds
             BigDecimal estimatedCostOfBuy = coinAmountToPurchase.multiply(BTCPriceInUSD);
             estimatedCostOfBuy = estimatedCostOfBuy.multiply(new BigDecimal(1.003));
-            Account usdAcct = this.account.getUSDCoinbaseProAccount();
+            Account usdAcct = this.account.getCoinbaseProUSDAccount();
             if(usdAcct.getAvailable().doubleValue() < estimatedCostOfBuy.doubleValue()) //asume we might need to pay the 0.3% fee (only in some situations
             {
                 String logInfo = "insufficient funds to buy, not proceeding " + usdAcct.getAvailable().doubleValue() + " < " + estimatedCostOfBuy.doubleValue();
-                CryptomoneyAutotask.logProv.LogMessage(logInfo);
-                CryptomoneyAutotask.logProvFile.LogMessage(logInfo);
+                CryptomoneyAutotask.logMultiplexer.LogMessage(logInfo);
                 return;
             }
             
@@ -197,22 +202,19 @@ public class RuleAction_BuyBTCDCAPostOnly extends Rule
                 String desperationInfo = " desp: " + this.account.btcBuyFrequencyDesperation + "/" + this.account.BTC_BUY_FREQUENCY_DESPERATION_THRESHOLD;
                 String postOnlyInfo = "postType " + (postOnly ? "postonly" : "immediate");
                 String logString = "Placed order " + order.toString() + " " + desperationInfo + " " + postOnlyInfo + " estUsd: " + estimatedCostOfBuy.doubleValue();
-                CryptomoneyAutotask.logProv.LogMessage(logString);
-                CryptomoneyAutotask.logProvFile.LogMessage(logString);
+                CryptomoneyAutotask.logMultiplexer.LogMessage(logString);
                 this.account.allowanceBuyBTCinUSD.addToAllowance(estimatedCostOfBuy.negate());
                 
                 //purge any extra allowance
                 if(this.account.allowanceBuyBTCinUSD.getAllowance().doubleValue() > 0)
                 {
-                    CryptomoneyAutotask.logProv.LogMessage("purging USD BTC BUY allowance " + this.account.allowanceBuyBTCinUSD.getAllowance());
-                    CryptomoneyAutotask.logProvFile.LogMessage("purging USD BTC BUY allowance " + this.account.allowanceBuyBTCinUSD.getAllowance());
+                    CryptomoneyAutotask.logMultiplexer.LogMessage("purging USD BTC BUY allowance " + this.account.allowanceBuyBTCinUSD.getAllowance());
                     this.account.allowanceBuyBTCinUSD.resetAllowance();
                 }
             }
             else
             {
-                CryptomoneyAutotask.logProv.LogMessage("buy order failed");
-                CryptomoneyAutotask.logProvFile.LogMessage("buy order failed");
+                CryptomoneyAutotask.logMultiplexer.LogMessage("buy order failed");
             }
             
             
@@ -229,6 +231,13 @@ public class RuleAction_BuyBTCDCAPostOnly extends Rule
     @Override
     public String getHelpString()
     {
-        return this.getRuleType() + " " + this.getActionType() + "";
+        return this.getRuleType() + " " + this.getActionType() 
+            + " maximumAvgOccurrencesPerDay:" + maximumAvgOccurrencesPerDay
+            + " minimumQuantityBuyUSD:" + minimumQuantityBuyUSD
+            + " minimumQuantityCoinThreshold:" + minimumQuantityCoinThreshold
+            + " maximumQuantityCoin:" + maximumQuantityCoin
+            + " randomChanceToProceed:" + randomChanceToProceed
+                ;
+        
     }
 }
