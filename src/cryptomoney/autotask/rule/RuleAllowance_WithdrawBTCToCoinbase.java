@@ -66,6 +66,6 @@ public class RuleAllowance_WithdrawBTCToCoinbase extends Rule
     public String getHelpString()
     {
         return this.getRuleType() + " " + this.getActionType()                 
-                +  "amountPerDayUSD:" + amountPerDayUSD;
+                +  " amountPerDayUSD:" + amountPerDayUSD;
     }
 }

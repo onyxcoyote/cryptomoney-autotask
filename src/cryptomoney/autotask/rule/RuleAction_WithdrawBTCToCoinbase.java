@@ -132,7 +132,7 @@ public class RuleAction_WithdrawBTCToCoinbase extends Rule
 
                 CryptomoneyAutotask.logProv.LogMessage("actiontype: " + getActionType().toString());
 
-                BigDecimal btcToWithdraw = this.account.allowanceWithdrawBTCToCoinbaseInUSD.getAllowance().divide(btcPrice, 8, RoundingMode.HALF_EVEN);
+                BigDecimal btcToWithdraw = this.account.allowanceWithdrawBTCToCoinbaseInUSD.getAllowance().divide(btcPrice, 8, RoundingMode.UP);
 
                 //withdraw less if we have less available
                 if(btcToWithdraw.doubleValue() > valBtcAvail)
@@ -157,7 +157,7 @@ public class RuleAction_WithdrawBTCToCoinbase extends Rule
                 }
 
                 //BigDecimal bdBTCAmountToWithdraw = BigDecimal.valueOf(btcToWithdraw).setScale(8, RoundingMode.HALF_EVEN);
-                BigDecimal estimatedUSDAmountOfWithdrawal = btcToWithdraw.multiply(btcPrice).setScale(2, RoundingMode.HALF_EVEN);
+                BigDecimal estimatedUSDAmountOfWithdrawal = btcToWithdraw.multiply(btcPrice).setScale(2, RoundingMode.UP);
                 
                 PaymentResponse response = CryptomoneyAutotask.withdrawalsService.makeWithdrawalToCoinbase(btcToWithdraw, "BTC", btcCoinbaseAccount_Id); //API CALL
 

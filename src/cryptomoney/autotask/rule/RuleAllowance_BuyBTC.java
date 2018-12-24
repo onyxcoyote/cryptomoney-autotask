@@ -66,6 +66,6 @@ public class RuleAllowance_BuyBTC extends Rule
     public String getHelpString()
     {
         return this.getRuleType() + " " + this.getActionType() 
-                +  "amountPerDayUSD:" + amountPerDayUSD;
+                +  " amountPerDayUSD:" + amountPerDayUSD;
     }
 }

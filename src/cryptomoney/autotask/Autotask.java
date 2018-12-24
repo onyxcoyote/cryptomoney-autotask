@@ -67,6 +67,11 @@ public class Autotask
     
     private boolean executeImmediately;
     
+    
+    private static double MAXIMUM_SAFE_NUMBER_OF_EXECUTIONS_PER_DAY = 5000;
+    private static double MAXIMUM_SAFE_VALUE_USD_TRANSACTION = 200;
+    private static double MAXIMUM_SAFE_BTC_QUANTITY_TRANSACTION = 0.1;
+    
     //public static int iterationIntervalMS = 1000*60*5; //5 minutes
     
 
@@ -100,7 +105,7 @@ public class Autotask
     {
         Initialize(account1);
         
-        CancelOpenOrders();
+        //CancelOpenOrders();
         
         DoMainLoop();
     }
@@ -109,17 +114,25 @@ public class Autotask
     {
         LoadRuleHelp();
         LoadAccounts();
-        LoadRules();
+        try
+        {
+            LoadRules();
+        }
+        catch(Exception ex)
+        {
+            CryptomoneyAutotask.logMultiplexer.LogException(ex);
+            System.exit(1);
+        }
         ValidateRules();
         TestAccountAPI(_account);
         
         //todo: https://docs.pro.coinbase.com/#get-products min BTC purchase size can change in the future
     }
     
-    private void CancelOpenOrders()
+    /*private void CancelOpenOrders()
     {
         account1.ProcessBTCBuyOrders(true);
-    }
+    }*/
     
         
     private void LoadRuleHelp()
@@ -147,63 +160,74 @@ public class Autotask
         //accounts.put(1, account1); //account #1
     }
     
-    private void LoadRules()
+    private void LoadRules() throws java.io.IOException, Exception
     {
-        //todo: un-hard code rules
-        //todo: use BigDecimal instead of double
+        //todo: use BigDecimal instead of double for calculations
         
         
-        boolean useRule_RuleAllowance_BuyBTC                = true;
-        boolean useRule_RuleAllowance_WithdrawBTCToCoinbase = true;
-        boolean useRule_RuleAllowance_DepositUSD            = true;
         
-        boolean useRule_RuleAction_ProcessBTCBuyPostOrders  = true;
         
-        boolean useRule_RuleAction_BuyBTCDCAPostOnly        = true;
-        boolean useRule_RuleAction_WithdrawBTCToCoinbase    = true;
-        boolean useRule_RuleAction_DepositUSD               = true;
+        boolean ALLOWANCE_BUY_BTC__enable                   =   Boolean.parseBoolean(CryptomoneyAutotask.config.getConfigString("ALLOWANCE_BUY_BTC__enable"));
+        boolean ALLOWANCE_WITHDRAW_BTC_TO_COINBASE__enable  =   Boolean.parseBoolean(CryptomoneyAutotask.config.getConfigString("ALLOWANCE_WITHDRAW_BTC_TO_COINBASE__enable"));
+        boolean ALLOWANCE_DEPOSIT_USD__enable               =   Boolean.parseBoolean(CryptomoneyAutotask.config.getConfigString("ALLOWANCE_DEPOSIT_USD__enable"));
+        boolean ACTION_PROCESS_BTC_BUY_POST_ORDERS__enable  =   Boolean.parseBoolean(CryptomoneyAutotask.config.getConfigString("ACTION_PROCESS_BTC_BUY_POST_ORDERS__enable"));
+        boolean ACTION_BUY_BTC_DCA_POSTONLY__enable         =   Boolean.parseBoolean(CryptomoneyAutotask.config.getConfigString("ACTION_BUY_BTC_DCA_POSTONLY__enable"));
+        boolean ACTION_WITHDRAW_BTC_TO_COINBASE__enable     =   Boolean.parseBoolean(CryptomoneyAutotask.config.getConfigString("ACTION_WITHDRAW_BTC_TO_COINBASE__enable"));
+        boolean ACTION_DEPOSIT_USD__enable                  =   Boolean.parseBoolean(CryptomoneyAutotask.config.getConfigString("ACTION_DEPOSIT_USD__enable"));
+        boolean ALARM_PRINT_BALANCE__enable                 =   Boolean.parseBoolean(CryptomoneyAutotask.config.getConfigString("ALARM_PRINT_BALANCE__enable"));
         
-        boolean useRule_RuleAlarm_PrintBalance              = true;
         
         //ALLOWANCE RULES
         
         //account 1 - ALLOWANCE  buy_bitcoin $21/day (divided per hour)
-        if(useRule_RuleAllowance_BuyBTC)
+        if(ALLOWANCE_BUY_BTC__enable)
         {
-            
-            double ALLOWANCE_USD_BUY_AMOUNT_PER_DAY = 42.00; //TEST
-            //double ALLOWANCE_USD_AMOUNT_PER_DAY = 21.00;
-            RuleAllowance_BuyBTC allowance_buyBTC = new RuleAllowance_BuyBTC(executeImmediately, ALLOWANCE_USD_BUY_AMOUNT_PER_DAY); 
+            double ALLOWANCE_BUY_BTC__amountPerDayUS = Double.parseDouble(CryptomoneyAutotask.config.getConfigString("ALLOWANCE_BUY_BTC__amountPerDayUS"));
+            if(ALLOWANCE_BUY_BTC__amountPerDayUS < 0 || ALLOWANCE_BUY_BTC__amountPerDayUS > MAXIMUM_SAFE_VALUE_USD_TRANSACTION)
+            {
+                throw new Exception("ALLOWANCE_BUY_BTC__amountPerDayUS exceeds hard-coded safe maximum");
+            }
+            RuleAllowance_BuyBTC allowance_buyBTC = new RuleAllowance_BuyBTC(executeImmediately, ALLOWANCE_BUY_BTC__amountPerDayUS); 
             rules.add(allowance_buyBTC);
         }
         
         //account 1 - ALLOWANCE  coinbase_pro_to_coinbase $20/day (divided per hour)
-        if(useRule_RuleAllowance_WithdrawBTCToCoinbase)
+        if(ALLOWANCE_WITHDRAW_BTC_TO_COINBASE__enable)
         {
-            double ALLOWANCE_BTC_TO_COINBASE_PER_DAY = 41.00; //TEST
-            //double ALLOWANCE_BTC_TO_COINBASE_PER_DAY = 20.50;
-            RuleAllowance_WithdrawBTCToCoinbase allowanceBTCtoCoinbase = new RuleAllowance_WithdrawBTCToCoinbase(executeImmediately, ALLOWANCE_BTC_TO_COINBASE_PER_DAY);
+            double ALLOWANCE_WITHDRAW_BTC_TO_COINBASE__amountPerDayUSD = Double.parseDouble(CryptomoneyAutotask.config.getConfigString("ALLOWANCE_WITHDRAW_BTC_TO_COINBASE__amountPerDayUSD"));
+            if(ALLOWANCE_WITHDRAW_BTC_TO_COINBASE__amountPerDayUSD < 0 || ALLOWANCE_WITHDRAW_BTC_TO_COINBASE__amountPerDayUSD > MAXIMUM_SAFE_VALUE_USD_TRANSACTION)
+            {
+                throw new Exception("ALLOWANCE_WITHDRAW_BTC_TO_COINBASE__amountPerDayUSD exceeds hard-coded safe maximum");
+            }
+            RuleAllowance_WithdrawBTCToCoinbase allowanceBTCtoCoinbase = new RuleAllowance_WithdrawBTCToCoinbase(executeImmediately, ALLOWANCE_WITHDRAW_BTC_TO_COINBASE__amountPerDayUSD);
             rules.add(allowanceBTCtoCoinbase);
         }
 
         
         //account 1 - ALLOWANCE  deposit USD $22/day (divided per hour)
-        if(useRule_RuleAllowance_DepositUSD)
+        if(ALLOWANCE_DEPOSIT_USD__enable)
         {
-            double ALLOWANCE_DEPOSIT_USD_PER_DAY = 44.00; //TEST
-            //double ALLOWANCE_DEPOSIT_USD_PER_DAY = 22.00;
-            RuleAllowance_DepositUSD allowanceDepositUSD = new RuleAllowance_DepositUSD(executeImmediately, ALLOWANCE_DEPOSIT_USD_PER_DAY);
+            double ALLOWANCE_DEPOSIT_USD__amountPerDayUSD  = Double.parseDouble(CryptomoneyAutotask.config.getConfigString("ALLOWANCE_DEPOSIT_USD__amountPerDayUSD"));
+            if(ALLOWANCE_DEPOSIT_USD__amountPerDayUSD < 0 || ALLOWANCE_DEPOSIT_USD__amountPerDayUSD > MAXIMUM_SAFE_VALUE_USD_TRANSACTION)
+            {
+                throw new Exception("ALLOWANCE_DEPOSIT_USD__amountPerDayUSD exceeds hard-coded safe maximum");
+            }
+            RuleAllowance_DepositUSD allowanceDepositUSD = new RuleAllowance_DepositUSD(executeImmediately, ALLOWANCE_DEPOSIT_USD__amountPerDayUSD);
             rules.add(allowanceDepositUSD);
         }
         
         
         //ALARM RULES
-        if(useRule_RuleAlarm_PrintBalance)
+        if(ALARM_PRINT_BALANCE__enable)
         {
-            double MAX_AVERAGE_ACTIONS_PER_DAY = 4.0; //4 = every ~8 hours
+            double ALARM_PRINT_BALANCE__maximumAvgOccurrencesPerDay = Double.parseDouble(CryptomoneyAutotask.config.getConfigString("ALARM_PRINT_BALANCE__maximumAvgOccurrencesPerDay"));
+            if(ALARM_PRINT_BALANCE__maximumAvgOccurrencesPerDay < 0 || ALARM_PRINT_BALANCE__maximumAvgOccurrencesPerDay > MAXIMUM_SAFE_NUMBER_OF_EXECUTIONS_PER_DAY)
+            {
+                throw new Exception("ALARM_PRINT_BALANCE__maximumAvgOccurrencesPerDay exceeds hard-coded safe maximum");
+            }
             RuleAlarm_PrintBalance alarm_printBalance = new RuleAlarm_PrintBalance(
                 executeImmediately,
-                MAX_AVERAGE_ACTIONS_PER_DAY);
+                ALARM_PRINT_BALANCE__maximumAvgOccurrencesPerDay);
             rules.add(alarm_printBalance);
         }
         /*
@@ -219,72 +243,118 @@ public class Autotask
         
       
         //ACTION RULES
-        if(useRule_RuleAction_ProcessBTCBuyPostOrders)
+        if(ACTION_PROCESS_BTC_BUY_POST_ORDERS__enable)
         {
-            double MAX_AVERAGE_ACTIONS_PER_DAY = 481.0; //480 = every ~3 minutes
+            double ACTION_PROCESS_BTC_BUY_POST_ORDERS__maximumAvgOccurrencesPerDay = Double.parseDouble(CryptomoneyAutotask.config.getConfigString("ACTION_PROCESS_BTC_BUY_POST_ORDERS__maximumAvgOccurrencesPerDay"));
+            if(ACTION_PROCESS_BTC_BUY_POST_ORDERS__maximumAvgOccurrencesPerDay < 0 || ACTION_PROCESS_BTC_BUY_POST_ORDERS__maximumAvgOccurrencesPerDay > MAXIMUM_SAFE_NUMBER_OF_EXECUTIONS_PER_DAY)
+            {
+                throw new Exception("ACTION_PROCESS_BTC_BUY_POST_ORDERS__maximumAvgOccurrencesPerDay exceeds hard-coded safe maximum");
+            }            
             RuleAction_ProcessBTCBuyPostOrders action_processOrders = new RuleAction_ProcessBTCBuyPostOrders(
                 executeImmediately, 
-                MAX_AVERAGE_ACTIONS_PER_DAY);
+                ACTION_PROCESS_BTC_BUY_POST_ORDERS__maximumAvgOccurrencesPerDay);
             rules.add(action_processOrders);
         }
         
 
-        //account 1 - ACTION buy (w/ BUYMETHOD) around X bitcoin per day using USD, threshold 0.001 bitcoin, max .005 bitcoin, Do 25% of the time (randomness)
-        if(useRule_RuleAction_BuyBTCDCAPostOnly)
+        //account 1 - ACTION buy (w/ BUYMETHOD) around X bitcoin per day using USD
+        if(ACTION_BUY_BTC_DCA_POSTONLY__enable)
         {
-            //double MAX_AVERAGE_ACTIONS_PER_DAY = 720.0; //stub
-            //double MAX_AVERAGE_ACTIONS_PER_DAY = 48.0; //48 = every 30 minutes    CLOSE TO NORMAL TEST
-            double MAX_AVERAGE_ACTIONS_PER_DAY = 1440.1; //TEST RANDOM CHANCE
-            //MAX_AVERAGE_ACTIONS_PER_DAY = 10;
-
-            double MIN_USD_BUY_AMOUNT = 5.00;
-            double COINBASE_PRO_MINIMUM_BTC_TRADE_THRESHOLD = 0.001;
-            double MAXIMUM_BTC_AMOUNT_TO_PURCHASE = 0.01;
-            double PERCENT_OF_TIME_TO_DO_ACTION_WHEN_TRIGGERED = 0.15; //allows some randomness so it doesn't always happen
+            
+            double ACTION_BUY_BTC_DCA_POSTONLY__maximumAvgOccurrencesPerDay =   Double.parseDouble(CryptomoneyAutotask.config.getConfigString("ACTION_BUY_BTC_DCA_POSTONLY__maximumAvgOccurrencesPerDay"));
+            double ACTION_BUY_BTC_DCA_POSTONLY__minimumQuantityBuyUSD =         Double.parseDouble(CryptomoneyAutotask.config.getConfigString("ACTION_BUY_BTC_DCA_POSTONLY__minimumQuantityBuyUSD"));
+            double ACTION_BUY_BTC_DCA_POSTONLY__minimumQuantityCoinThreshold =  Double.parseDouble(CryptomoneyAutotask.config.getConfigString("ACTION_BUY_BTC_DCA_POSTONLY__minimumQuantityCoinThreshold"));
+            double ACTION_BUY_BTC_DCA_POSTONLY__maximumQuantityCoin =           Double.parseDouble(CryptomoneyAutotask.config.getConfigString("ACTION_BUY_BTC_DCA_POSTONLY__maximumQuantityCoin"));
+            double ACTION_BUY_BTC_DCA_POSTONLY__randomChanceToProceed =         Double.parseDouble(CryptomoneyAutotask.config.getConfigString("ACTION_BUY_BTC_DCA_POSTONLY__randomChanceToProceed")); //allows some randomness so it doesn't always happen so predictably
+            
+            if(ACTION_BUY_BTC_DCA_POSTONLY__maximumAvgOccurrencesPerDay < 0 || ACTION_BUY_BTC_DCA_POSTONLY__maximumAvgOccurrencesPerDay > MAXIMUM_SAFE_VALUE_USD_TRANSACTION)
+            {
+                throw new Exception("ACTION_BUY_BTC_DCA_POSTONLY__maximumAvgOccurrencesPerDay exceeds hard-coded safe maximum");
+            }      
+            if(ACTION_BUY_BTC_DCA_POSTONLY__minimumQuantityBuyUSD < 1 || ACTION_BUY_BTC_DCA_POSTONLY__minimumQuantityBuyUSD > MAXIMUM_SAFE_VALUE_USD_TRANSACTION)
+            {
+                throw new Exception("ACTION_BUY_BTC_DCA_POSTONLY__minimumQuantityBuyUSD exceeds hard-coded safe maximum");
+            }      
+            if(ACTION_BUY_BTC_DCA_POSTONLY__minimumQuantityCoinThreshold < 0.0001 || ACTION_BUY_BTC_DCA_POSTONLY__minimumQuantityCoinThreshold > MAXIMUM_SAFE_BTC_QUANTITY_TRANSACTION)
+            {
+                throw new Exception("ACTION_BUY_BTC_DCA_POSTONLY__minimumQuantityCoinThreshold exceeds hard-coded safe maximum");
+            }      
+            if(ACTION_BUY_BTC_DCA_POSTONLY__maximumQuantityCoin < 0.001 || ACTION_BUY_BTC_DCA_POSTONLY__maximumQuantityCoin > MAXIMUM_SAFE_BTC_QUANTITY_TRANSACTION)
+            {
+                throw new Exception("ACTION_BUY_BTC_DCA_POSTONLY__maximumQuantityCoin exceeds hard-coded safe maximum");
+            }      
+            if(ACTION_BUY_BTC_DCA_POSTONLY__randomChanceToProceed < 0.01 || ACTION_BUY_BTC_DCA_POSTONLY__randomChanceToProceed > MAXIMUM_SAFE_BTC_QUANTITY_TRANSACTION)
+            {
+                throw new Exception("ACTION_BUY_BTC_DCA_POSTONLY__randomChanceToProceed exceeds hard-coded safe maximum");
+            }          
+                    
+                    
             RuleAction_BuyBTCDCAPostOnly action1 = new RuleAction_BuyBTCDCAPostOnly(
                     executeImmediately,
-                    MAX_AVERAGE_ACTIONS_PER_DAY, 
-                    MIN_USD_BUY_AMOUNT,
-                    COINBASE_PRO_MINIMUM_BTC_TRADE_THRESHOLD, 
-                    MAXIMUM_BTC_AMOUNT_TO_PURCHASE,
-                    PERCENT_OF_TIME_TO_DO_ACTION_WHEN_TRIGGERED);
+                    ACTION_BUY_BTC_DCA_POSTONLY__maximumAvgOccurrencesPerDay, 
+                    ACTION_BUY_BTC_DCA_POSTONLY__minimumQuantityBuyUSD,
+                    ACTION_BUY_BTC_DCA_POSTONLY__minimumQuantityCoinThreshold, 
+                    ACTION_BUY_BTC_DCA_POSTONLY__maximumQuantityCoin,
+                    ACTION_BUY_BTC_DCA_POSTONLY__randomChanceToProceed);
             rules.add(action1);
         }
-        //todo: get rid of allowance and add to regular rules
+        //todo: get rid of allowance and add to regular rules?
         
         
-        //account 1 - ACTION withdraw X bitcoin (from coinbase pro) to coinbase account, threshold $20->bitcoin, max $100->bitcoin    
-        if(useRule_RuleAction_WithdrawBTCToCoinbase)
+        //account 1 - ACTION withdraw X bitcoin (from coinbase pro) to coinbase account 
+        if(ACTION_WITHDRAW_BTC_TO_COINBASE__enable)
         {
-            double MAX_AVERAGE_ACTIONS_PER_DAY = 24.1; //24 = every 60 minutes
-            //MAX_AVERAGE_ACTIONS_PER_DAY = 1.0;
-
-            //double MINIMUM_AMOUNT_TO_TRANSFER = 20.00; //STUB
-            double MINIMUM_AMOUNT_TO_TRANSFER = 5.00; //TEST
-            double MAXIMUM_AMOUNT_TO_TRANSFER = 50.00;
+            double ACTION_WITHDRAW_BTC_TO_COINBASE__maximumAvgOccurrencesPerDay =    Double.parseDouble(CryptomoneyAutotask.config.getConfigString("ACTION_WITHDRAW_BTC_TO_COINBASE__maximumAvgOccurrencesPerDay"));
+            double ACTION_WITHDRAW_BTC_TO_COINBASE__minimumUSDQuantityThreshold =     Double.parseDouble(CryptomoneyAutotask.config.getConfigString("ACTION_WITHDRAW_BTC_TO_COINBASE__minimumUSDQuantityThreshold"));
+            double ACTION_WITHDRAW_BTC_TO_COINBASE__maximumUSDQuantity =     Double.parseDouble(CryptomoneyAutotask.config.getConfigString("ACTION_WITHDRAW_BTC_TO_COINBASE__maximumUSDQuantity"));
+            
+            if(ACTION_WITHDRAW_BTC_TO_COINBASE__maximumAvgOccurrencesPerDay < 0 || ACTION_WITHDRAW_BTC_TO_COINBASE__maximumAvgOccurrencesPerDay > MAXIMUM_SAFE_NUMBER_OF_EXECUTIONS_PER_DAY)
+            {
+                throw new Exception("ACTION_WITHDRAW_BTC_TO_COINBASE__maximumAvgOccurrencesPerDay exceeds hard-coded safe maximum");
+            }
+            if(ACTION_WITHDRAW_BTC_TO_COINBASE__minimumUSDQuantityThreshold < 0 || ACTION_WITHDRAW_BTC_TO_COINBASE__minimumUSDQuantityThreshold > MAXIMUM_SAFE_VALUE_USD_TRANSACTION)
+            {
+                throw new Exception("ACTION_WITHDRAW_BTC_TO_COINBASE__minimumUSDQuantityThreshold exceeds hard-coded safe maximum");
+            }
+            if(ACTION_WITHDRAW_BTC_TO_COINBASE__maximumUSDQuantity < 0 || ACTION_WITHDRAW_BTC_TO_COINBASE__maximumUSDQuantity > MAXIMUM_SAFE_VALUE_USD_TRANSACTION)
+            {
+                throw new Exception("ACTION_WITHDRAW_BTC_TO_COINBASE__maximumUSDQuantity exceeds hard-coded safe maximum");
+            }
+            
             RuleAction_WithdrawBTCToCoinbase action2 = new RuleAction_WithdrawBTCToCoinbase(
                     executeImmediately,
-                    MAX_AVERAGE_ACTIONS_PER_DAY,
-                    MINIMUM_AMOUNT_TO_TRANSFER,
-                    MAXIMUM_AMOUNT_TO_TRANSFER);
+                    ACTION_WITHDRAW_BTC_TO_COINBASE__maximumAvgOccurrencesPerDay,
+                    ACTION_WITHDRAW_BTC_TO_COINBASE__minimumUSDQuantityThreshold,
+                    ACTION_WITHDRAW_BTC_TO_COINBASE__maximumUSDQuantity);
             rules.add(action2);
         }
 
         
-        //account 1 - ACTION transfer X USD from bank 1, threshold >= $50, max $100
-        if(useRule_RuleAction_DepositUSD)
+        //account 1 - ACTION transfer X USD from bank 1
+        if(ACTION_DEPOSIT_USD__enable)
         {
-            double MAX_AVERAGE_ACTIONS_PER_DAY = 4.1; //deposit 4x/day
-            //MAX_AVERAGE_ACTIONS_PER_DAY = 0.5;
-
-            double MINIMUM_AMOUNT_TO_DEPOSIT = 20.00; //TEST
-            //double MINIMUM_AMOUNT_TO_DEPOSIT = 50.00;
-            double MAXIMUM_AMOUNT_TO_DEPOSIT = 100.00;
+            double ACTION_DEPOSIT_USD__maximumAvgOccurrencesPerDay =    Double.parseDouble(CryptomoneyAutotask.config.getConfigString("ACTION_DEPOSIT_USD__maximumAvgOccurrencesPerDay"));
+            double ACTION_DEPOSIT_USD__minimumUSDQuantityThreshold =      Double.parseDouble(CryptomoneyAutotask.config.getConfigString("ACTION_DEPOSIT_USD__minimumUSDQuantityThreshold"));
+            double ACTION_DEPOSIT_USD__maximumUSDQuantity =      Double.parseDouble(CryptomoneyAutotask.config.getConfigString("ACTION_DEPOSIT_USD__maximumUSDQuantity"));
+            
+            if(ACTION_DEPOSIT_USD__maximumAvgOccurrencesPerDay < 0 || ACTION_DEPOSIT_USD__maximumAvgOccurrencesPerDay > MAXIMUM_SAFE_NUMBER_OF_EXECUTIONS_PER_DAY)
+            {
+                throw new Exception("ACTION_DEPOSIT_USD__maximumAvgOccurrencesPerDay exceeds hard-coded safe maximum");
+            }            
+            if(ACTION_DEPOSIT_USD__minimumUSDQuantityThreshold < 0 || ACTION_DEPOSIT_USD__minimumUSDQuantityThreshold > MAXIMUM_SAFE_VALUE_USD_TRANSACTION)
+            {
+                throw new Exception("ACTION_WITHDRAW_BTC_TO_COINBASE__maximumUSDQuantity exceeds hard-coded safe maximum");
+            }
+            if(ACTION_DEPOSIT_USD__maximumUSDQuantity < 0 || ACTION_DEPOSIT_USD__maximumUSDQuantity > MAXIMUM_SAFE_VALUE_USD_TRANSACTION)
+            {
+                throw new Exception("ACTION_WITHDRAW_BTC_TO_COINBASE__maximumUSDQuantity exceeds hard-coded safe maximum");
+            }
+            
             RuleAction_DepositUSD action3 = new RuleAction_DepositUSD(
                     executeImmediately,
-                    MAX_AVERAGE_ACTIONS_PER_DAY, 
-                    MINIMUM_AMOUNT_TO_DEPOSIT, 
-                    MAXIMUM_AMOUNT_TO_DEPOSIT);
+                    ACTION_DEPOSIT_USD__maximumAvgOccurrencesPerDay, 
+                    ACTION_DEPOSIT_USD__minimumUSDQuantityThreshold, 
+                    ACTION_DEPOSIT_USD__maximumUSDQuantity);
             rules.add(action3);
         }
         

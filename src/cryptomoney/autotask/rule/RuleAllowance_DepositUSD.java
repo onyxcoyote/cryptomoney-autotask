@@ -66,6 +66,6 @@ public class RuleAllowance_DepositUSD extends Rule
     public String getHelpString()
     {
         return this.getRuleType() + " " + this.getActionType()                 
-                +  "amountPerDayUSD:" + amountPerDayUSD;
+                +  " amountPerDayUSD:" + amountPerDayUSD;
     }
 }

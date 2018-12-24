@@ -76,6 +76,7 @@ public class CryptomoneyAutotask
     public static double BTC_PRICE_MIN_REALISTIC = 1000;
     public static double BTC_PRICE_MAX_REALISTIC = 15000; //todo: may need to change this in the future
     
+    public static FileConfig config;
     
     /**
      * @param args the command line arguments
@@ -85,7 +86,7 @@ public class CryptomoneyAutotask
     { 
         try
         {
-            String version = "0.12";
+            String version = "0.14";
 
             try
             {
@@ -107,7 +108,8 @@ public class CryptomoneyAutotask
             CryptomoneyAutotask.logMultiplexer.LogMessage("program starting");
 
             //Load config settings
-            FileConfig config = new FileConfig(logProvFile);
+            
+            config = new FileConfig(logProvFile);
             String apiPubKey = config.getConfigString("api_pub_key");
             String apiSecretKey = config.getConfigString("api_secret_key");
             String apiPassphrase = config.getConfigString("api_passphrase");
@@ -129,6 +131,7 @@ public class CryptomoneyAutotask
             Signature sig = new Signature(apiSecretKey);
 
             exchange = new GdaxExchangeImpl(apiPubKey, apiPassphrase, apiBaseURL, sig);
+            
             orderService = new OrderService(exchange);
             accountService = new AccountService(exchange);
             withdrawalsService = new WithdrawalsService(exchange);
