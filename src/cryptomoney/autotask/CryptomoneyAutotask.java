@@ -73,8 +73,8 @@ public class CryptomoneyAutotask
     public static DecimalFormat btcFormat = new DecimalFormat("#0.00000000");
     public static DecimalFormat usdFormat = new DecimalFormat("#0.00");
     
-    public static double BTC_PRICE_MIN_REALISTIC = 1000;
-    public static double BTC_PRICE_MAX_REALISTIC = 15000; //todo: may need to change this in the future
+    public static double BTC_USD_PRICE_MIN_REALISTIC = 1000;
+    public static double BTC_USD_PRICE_MAX_REALISTIC = 15000; //todo: may need to change this in the future
     
     public static FileConfig config;
     
@@ -109,7 +109,7 @@ public class CryptomoneyAutotask
 
             //Load config settings
             
-            config = new FileConfig(logProvFile);
+            config = new FileConfig(logMultiplexer);
             String apiPubKey = config.getConfigString("api_pub_key");
             String apiSecretKey = config.getConfigString("api_secret_key");
             String apiPassphrase = config.getConfigString("api_passphrase");

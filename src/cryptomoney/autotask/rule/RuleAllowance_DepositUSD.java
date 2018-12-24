@@ -17,6 +17,9 @@
 package cryptomoney.autotask.rule;
 
 import cryptomoney.autotask.CryptomoneyAutotask;
+import cryptomoney.autotask.allowance.AllowanceFiat;
+import cryptomoney.autotask.allowance.AllowanceType;
+import cryptomoney.autotask.currency.FiatCurrencyType;
 import java.math.BigDecimal;
 
 /**
@@ -25,6 +28,7 @@ import java.math.BigDecimal;
  */
 public class RuleAllowance_DepositUSD extends Rule
 {
+    private FiatCurrencyType fiatCurrencyType;    
     private double amountPerDayUSD;
     
     public RuleAllowance_DepositUSD()
@@ -32,17 +36,23 @@ public class RuleAllowance_DepositUSD extends Rule
         super(RuleType.ALLOWANCE, ActionType.ALLOWANCE_DEPOSIT_USD);
     }
     
-    public RuleAllowance_DepositUSD(boolean _executeImmediately, double _amountPerDayUSD)
+    public RuleAllowance_DepositUSD(FiatCurrencyType _fiatCurrencyType, boolean _executeImmediately, double _amountPerDayUSD)
     {
         super(RuleType.ALLOWANCE, ActionType.ALLOWANCE_DEPOSIT_USD);
+        fiatCurrencyType = _fiatCurrencyType;
         amountPerDayUSD = _amountPerDayUSD;
         
         if(_executeImmediately)
         {
-            this.account.allowanceDepositUSD.addToAllowance(BigDecimal.valueOf(amountPerDayUSD)); //A FULL DAY'S AMOUNT
+            getAssociatedAllowance().addToAllowance(BigDecimal.valueOf(amountPerDayUSD)); //A FULL DAY'S AMOUNT
         }
         
-        CryptomoneyAutotask.logProv.LogMessage("CREATED actiontype: " + getActionType().toString() + " currentAmount: " + this.account.allowanceDepositUSD.getAllowance().doubleValue());
+        CryptomoneyAutotask.logProv.LogMessage("CREATED actiontype: " + getActionType().toString() + " currentAmount: " + getAssociatedAllowance().getAllowance().doubleValue());
+    }
+    
+    private AllowanceFiat getAssociatedAllowance()
+    {
+        return this.account.getAllowanceFiat(AllowanceType.Deposit, fiatCurrencyType);
     }
     
     @Override
@@ -56,8 +66,8 @@ public class RuleAllowance_DepositUSD extends Rule
         double amountPerIntervalUSD = amountPerDayUSD / intervalsPerDay;
         
         
-        this.account.allowanceDepositUSD.addToAllowance(BigDecimal.valueOf(amountPerIntervalUSD));
-        CryptomoneyAutotask.logProv.LogMessage("STATUS actiontype: " + getActionType().toString() + "new AllowanceDepositUSD: " + account.allowanceDepositUSD.getAllowance());
+        getAssociatedAllowance().addToAllowance(BigDecimal.valueOf(amountPerIntervalUSD));
+        CryptomoneyAutotask.logProv.LogMessage("STATUS actiontype: " + getActionType().toString() + "new AllowanceDepositUSD: " + getAssociatedAllowance().getAllowance());
      
         //CryptomoneyAutotask.logProv.LogMessage("");
     }

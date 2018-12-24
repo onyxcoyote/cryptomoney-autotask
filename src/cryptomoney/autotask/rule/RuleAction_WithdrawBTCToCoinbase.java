@@ -22,6 +22,10 @@ import com.coinbase.exchange.api.payments.CoinbaseAccount;
 import com.coinbase.exchange.api.entity.PaymentResponse;
 import com.coinbase.exchange.api.marketdata.MarketData;
 import com.coinbase.exchange.api.marketdata.OrderItem;
+import cryptomoney.autotask.allowance.AllowanceCoinFiat;
+import cryptomoney.autotask.allowance.AllowanceType;
+import cryptomoney.autotask.currency.CoinCurrencyType;
+import cryptomoney.autotask.currency.FiatCurrencyType;
 import cryptomoney.autotask.functions.SharedFunctions;
 import java.util.List;
 import java.math.BigDecimal;
@@ -33,6 +37,8 @@ import java.math.RoundingMode;
  */
 public class RuleAction_WithdrawBTCToCoinbase extends Rule
 {
+    private CoinCurrencyType coinCurrencyType;
+    private FiatCurrencyType fiatCurrencyType;
     private double maximumAvgOccurrencesPerDay;
     private double minimumUSDQuantityThreshold;
     private double maximumUSDQuantity;
@@ -44,10 +50,11 @@ public class RuleAction_WithdrawBTCToCoinbase extends Rule
         super(RuleType.ACTION, ActionType.ACTION_WITHDRAW_BTC_TO_COINBASE);
     }
     
-    public RuleAction_WithdrawBTCToCoinbase(boolean _executeImmediately, double _maximumAvgOccurrencesPerDay, double _minimumUSDQuantityThreshold, double _maximumUSDQuantity)
+    public RuleAction_WithdrawBTCToCoinbase(CoinCurrencyType _coinCurrencyType, FiatCurrencyType _fiatCurrencyType, boolean _executeImmediately, double _maximumAvgOccurrencesPerDay, double _minimumUSDQuantityThreshold, double _maximumUSDQuantity)
     {
         super(RuleType.ACTION, ActionType.ACTION_WITHDRAW_BTC_TO_COINBASE);
-
+        coinCurrencyType = _coinCurrencyType;
+        fiatCurrencyType = _fiatCurrencyType;
         maximumAvgOccurrencesPerDay = _maximumAvgOccurrencesPerDay;
         minimumUSDQuantityThreshold = _minimumUSDQuantityThreshold;
         maximumUSDQuantity = _maximumUSDQuantity;
@@ -57,6 +64,11 @@ public class RuleAction_WithdrawBTCToCoinbase extends Rule
             executionCount = (int)Math.ceil(getNumberOfExecutionsBeforeExecutingOnce());
         }
         
+    }
+    
+    private AllowanceCoinFiat getAssociatedAllowance()
+    {
+        return this.account.getAllowanceCoinFiat(AllowanceType.WithdrawCoinToCoinbase, coinCurrencyType, fiatCurrencyType);
     }
     
     private double getNumberOfExecutionsBeforeExecutingOnce()
@@ -75,9 +87,9 @@ public class RuleAction_WithdrawBTCToCoinbase extends Rule
 
         
         
-        if(this.account.allowanceWithdrawBTCToCoinbaseInUSD.getAllowance().doubleValue() < minimumUSDQuantityThreshold)
+        if(getAssociatedAllowance().getAllowance().doubleValue() < minimumUSDQuantityThreshold)
         {
-            CryptomoneyAutotask.logProv.LogMessage(getHelpString() + " account.getAllowanceWithdrawBTCToCoinbaseInUSD() does not exceed minimumUSDQuantityThreshold " + this.account.allowanceWithdrawBTCToCoinbaseInUSD.getAllowance() + "/" + minimumUSDQuantityThreshold);
+            CryptomoneyAutotask.logProv.LogMessage(getHelpString() + " account.getAllowanceWithdrawBTCToCoinbaseInUSD() does not exceed minimumUSDQuantityThreshold " + getAssociatedAllowance().getAllowance() + "/" + minimumUSDQuantityThreshold);
             return;
         }
         
@@ -104,9 +116,9 @@ public class RuleAction_WithdrawBTCToCoinbase extends Rule
         
         
         
-        BigDecimal btcPrice = SharedFunctions.GetBestBTCBuyPrice();
+        BigDecimal coinPrice = SharedFunctions.GetBestCoinBuyPrice(coinCurrencyType, fiatCurrencyType);
         
-        Account btcAccount = this.account.getCoinbaseProBTCAccount();
+        Account btcAccount = this.account.getCoinbaseProBTCAccount(); //TODO, make generic
         
         if(btcAccount == null)
         {
@@ -121,7 +133,7 @@ public class RuleAction_WithdrawBTCToCoinbase extends Rule
         if(btcAvail != null)
         { 
             valBtcAvail = btcAvail.doubleValue();
-            usdBalanceValueOfBTCInCoinbasePRO = valBtcAvail*btcPrice.doubleValue();
+            usdBalanceValueOfBTCInCoinbasePRO = valBtcAvail*coinPrice.doubleValue();
         }
         
         if(valBtcAvail > 0)
@@ -132,7 +144,7 @@ public class RuleAction_WithdrawBTCToCoinbase extends Rule
 
                 CryptomoneyAutotask.logProv.LogMessage("actiontype: " + getActionType().toString());
 
-                BigDecimal btcToWithdraw = this.account.allowanceWithdrawBTCToCoinbaseInUSD.getAllowance().divide(btcPrice, 8, RoundingMode.UP);
+                BigDecimal btcToWithdraw = getAssociatedAllowance().getAllowance().divide(coinPrice, 8, RoundingMode.UP);
 
                 //withdraw less if we have less available
                 if(btcToWithdraw.doubleValue() > valBtcAvail)
@@ -140,7 +152,7 @@ public class RuleAction_WithdrawBTCToCoinbase extends Rule
                     btcToWithdraw = new BigDecimal(valBtcAvail).setScale(8, RoundingMode.FLOOR);
                 }
                 
-                double maxBTCwithdrawQuantity = maximumUSDQuantity/btcPrice.doubleValue();
+                double maxBTCwithdrawQuantity = maximumUSDQuantity/coinPrice.doubleValue();
                 
                 //don't withdraw more than the max configured
                 if(btcToWithdraw.doubleValue() > maxBTCwithdrawQuantity)
@@ -157,7 +169,7 @@ public class RuleAction_WithdrawBTCToCoinbase extends Rule
                 }
 
                 //BigDecimal bdBTCAmountToWithdraw = BigDecimal.valueOf(btcToWithdraw).setScale(8, RoundingMode.HALF_EVEN);
-                BigDecimal estimatedUSDAmountOfWithdrawal = btcToWithdraw.multiply(btcPrice).setScale(2, RoundingMode.UP);
+                BigDecimal estimatedUSDAmountOfWithdrawal = btcToWithdraw.multiply(coinPrice).setScale(2, RoundingMode.UP);
                 
                 PaymentResponse response = CryptomoneyAutotask.withdrawalsService.makeWithdrawalToCoinbase(btcToWithdraw, "BTC", btcCoinbaseAccount_Id); //API CALL
 
@@ -165,13 +177,13 @@ public class RuleAction_WithdrawBTCToCoinbase extends Rule
                 CryptomoneyAutotask.logMultiplexer.LogMessage(logString);
 
 
-                this.account.allowanceWithdrawBTCToCoinbaseInUSD.addToAllowance(estimatedUSDAmountOfWithdrawal.negate());
+                getAssociatedAllowance().addToAllowance(estimatedUSDAmountOfWithdrawal.negate());
 
                 //purge any extra allowance
-                if(this.account.allowanceWithdrawBTCToCoinbaseInUSD.getAllowance().doubleValue() > 0)
+                if(getAssociatedAllowance().getAllowance().doubleValue() > 0)
                 {
-                    CryptomoneyAutotask.logMultiplexer.LogMessage("purging BTC withdraw allowance " + this.account.allowanceWithdrawBTCToCoinbaseInUSD.getAllowance());
-                    this.account.allowanceWithdrawBTCToCoinbaseInUSD.resetAllowance();
+                    CryptomoneyAutotask.logMultiplexer.LogMessage("purging BTC withdraw allowance " + getAssociatedAllowance().getAllowance());
+                    getAssociatedAllowance().resetAllowance();
                 }
             }
             else

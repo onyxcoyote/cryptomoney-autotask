@@ -19,6 +19,8 @@ package cryptomoney.autotask.rule;
 import com.coinbase.exchange.api.accounts.Account;
 import com.coinbase.exchange.api.orders.Order;
 import cryptomoney.autotask.CryptomoneyAutotask;
+import cryptomoney.autotask.currency.CoinCurrencyType;
+import cryptomoney.autotask.currency.FiatCurrencyType;
 import cryptomoney.autotask.functions.SharedFunctions;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
@@ -29,6 +31,8 @@ import java.math.RoundingMode;
  */
 public class RuleAction_ProcessBTCBuyPostOrders extends Rule
 {
+    private CoinCurrencyType coinCurrencyType;
+    private FiatCurrencyType fiatCurrencyType;
     private double maximumAvgOccurrencesPerDay;
     
     private int executionCount = 0; //if we set this to 999999 then it would execute right away upon running program (maybe)
@@ -43,9 +47,11 @@ public class RuleAction_ProcessBTCBuyPostOrders extends Rule
      * 
      * @param _maximumAvgOccurrencesPerDay
      */
-    public RuleAction_ProcessBTCBuyPostOrders(boolean _executeImmediately, double _maximumAvgOccurrencesPerDay)
+    public RuleAction_ProcessBTCBuyPostOrders(CoinCurrencyType _coinCurrencyType, FiatCurrencyType _fiatCurrencyType, boolean _executeImmediately, double _maximumAvgOccurrencesPerDay)
     {
         super(RuleType.ACTION, ActionType.ACTION_PROCESS_BTC_BUY_POST_ORDERS);
+        coinCurrencyType = _coinCurrencyType;
+        fiatCurrencyType = _fiatCurrencyType;
         maximumAvgOccurrencesPerDay = _maximumAvgOccurrencesPerDay;
         
         if(_executeImmediately)
@@ -97,7 +103,7 @@ public class RuleAction_ProcessBTCBuyPostOrders extends Rule
             
         }
         
-        this.account.ProcessBTCBuyOrders(false);
+        this.account.ProcessBuyOrders(this.coinCurrencyType, this.fiatCurrencyType, false);
         
         CryptomoneyAutotask.logProv.LogMessage("");
     }

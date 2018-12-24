@@ -19,6 +19,7 @@ package cryptomoney.autotask.functions;
 import com.coinbase.exchange.api.marketdata.MarketData;
 import com.coinbase.exchange.api.marketdata.OrderItem;
 import cryptomoney.autotask.CryptomoneyAutotask;
+import cryptomoney.autotask.currency.*;
 import java.math.BigDecimal;
 import java.util.Random;
 
@@ -67,67 +68,84 @@ public class SharedFunctions
         
     }
     
-    public static BigDecimal GetBestBTCSellPrice()
+    public static BigDecimal GetBestCoinSellPrice(CoinCurrencyType _coinCurrencyType, FiatCurrencyType _fiatCurrencyType)
     {
-        BigDecimal btcPrice = null;
+        BigDecimal coinPrice = null;
         int level = 1; //level 1 is only the best bid and ask
-        MarketData marketData = CryptomoneyAutotask.marketDataService.getMarketDataOrderBook("BTC-USD", Integer.toString(level));
+        MarketData marketData = CryptomoneyAutotask.marketDataService.getMarketDataOrderBook(TradingPair.getTradingPair(_coinCurrencyType, _fiatCurrencyType), Integer.toString(level));
         for(OrderItem orderItem : marketData.getAsks()) //ask = sell offer
         {
             //level 1 should only return 1 item
-            btcPrice = orderItem.getPrice();
+            coinPrice = orderItem.getPrice();
         }
         
-        if(btcPrice == null)
+        if(coinPrice == null)
         {
             CryptomoneyAutotask.logMultiplexer.LogMessage("btc price cannot be null");
             System.exit(1); //don't know what else to do
         }
         
-        if(btcPrice.doubleValue() < CryptomoneyAutotask.BTC_PRICE_MIN_REALISTIC)
+        if(_coinCurrencyType.equals(CoinCurrencyType.BTC) && _fiatCurrencyType.equals(FiatCurrencyType.USD))
         {
-            CryptomoneyAutotask.logMultiplexer.LogMessage("btc price cannot exceed min realistic");
-            System.exit(1); //this means a hard-coded change is needed
+            if(coinPrice.doubleValue() < CryptomoneyAutotask.BTC_USD_PRICE_MIN_REALISTIC)
+            {
+                CryptomoneyAutotask.logMultiplexer.LogMessage("coin price cannot exceed min realistic");
+                System.exit(1); //this means a hard-coded change is needed
+            }
+
+            if(coinPrice.doubleValue() > CryptomoneyAutotask.BTC_USD_PRICE_MAX_REALISTIC)
+            {
+                CryptomoneyAutotask.logMultiplexer.LogMessage("coin price cannot exceed max realistic");
+                System.exit(1); //this means a hard-coded change is needed
+            }
+        }
+        else
+        {
+            CryptomoneyAutotask.logMultiplexer.LogMessage("ERROR! Missing realistic value amounts for type " + _coinCurrencyType + " " + _fiatCurrencyType);
+            System.exit(1);
         }
         
-        if(btcPrice.doubleValue() > CryptomoneyAutotask.BTC_PRICE_MAX_REALISTIC)
-        {
-            CryptomoneyAutotask.logMultiplexer.LogMessage("btc price cannot exceed max realistic");
-            System.exit(1); //this means a hard-coded change is needed
-        }
-        
-        return btcPrice;
+        return coinPrice;
     }
     
-    public static BigDecimal GetBestBTCBuyPrice()
+    public static BigDecimal GetBestCoinBuyPrice(CoinCurrencyType _coinCurrencyType, FiatCurrencyType _fiatCurrencyType)
     {
-        BigDecimal btcPrice = null;
+        String pair = TradingPair.getTradingPair(_coinCurrencyType, _fiatCurrencyType);
+        BigDecimal coinPrice = null;
         int level = 1; //level 1 is only the best bid and ask
-        MarketData marketData = CryptomoneyAutotask.marketDataService.getMarketDataOrderBook("BTC-USD", Integer.toString(level));
+        MarketData marketData = CryptomoneyAutotask.marketDataService.getMarketDataOrderBook(pair, Integer.toString(level));
         for(OrderItem orderItem : marketData.getBids()) //bid = buy offer
         {
             //level 1 should only return 1 item
-            btcPrice = orderItem.getPrice();
+            coinPrice = orderItem.getPrice();
         }
         
-        if(btcPrice == null)
+        if(coinPrice == null)
         {
-            CryptomoneyAutotask.logMultiplexer.LogMessage("btc price cannot be null");
+            CryptomoneyAutotask.logMultiplexer.LogMessage("coin price cannot be null");
             System.exit(1); //don't know what else to do
         }
         
-        if(btcPrice.doubleValue() < CryptomoneyAutotask.BTC_PRICE_MIN_REALISTIC)
+        if(_coinCurrencyType.equals(CoinCurrencyType.BTC) && _fiatCurrencyType.equals(FiatCurrencyType.USD))
         {
-            CryptomoneyAutotask.logMultiplexer.LogMessage("btc price cannot exceed min realistic");
-            System.exit(1); //this means a hard-coded change is needed
+            if(coinPrice.doubleValue() < CryptomoneyAutotask.BTC_USD_PRICE_MIN_REALISTIC) //todo: make this more generic and better
+            {
+                CryptomoneyAutotask.logMultiplexer.LogMessage("coin price cannot exceed min realistic");
+                System.exit(1); //this means a hard-coded change is needed
+            }
+
+            if(coinPrice.doubleValue() > CryptomoneyAutotask.BTC_USD_PRICE_MAX_REALISTIC) //todo: make this more generic and better
+            {
+                CryptomoneyAutotask.logMultiplexer.LogMessage("coin price cannot exceed max realistic");
+                System.exit(1); //this means a hard-coded change is needed
+            }
+        }
+        else
+        {
+            CryptomoneyAutotask.logMultiplexer.LogMessage("ERROR! Missing realistic value amounts for type " + _coinCurrencyType + " " + _fiatCurrencyType);
+            System.exit(1);
         }
         
-        if(btcPrice.doubleValue() > CryptomoneyAutotask.BTC_PRICE_MAX_REALISTIC)
-        {
-            CryptomoneyAutotask.logMultiplexer.LogMessage("btc price cannot exceed max realistic");
-            System.exit(1); //this means a hard-coded change is needed
-        }
-        
-        return btcPrice;
+        return coinPrice;
     }
 }

@@ -16,44 +16,24 @@
  */
 package cryptomoney.autotask.allowance;
 
-import java.math.BigDecimal;
-import java.math.BigInteger;
-import java.math.RoundingMode;
+import cryptomoney.autotask.currency.*;
 
 /**
  *
  * @author onyxcoyote <no-reply@onyxcoyote.com>
  */
-public class Allowance
+public class AllowanceFiat extends Allowance
 {
-    private AllowanceType allowanceType;
-    private BigDecimal allowanceAmount = new BigDecimal(0.0).setScale(8, RoundingMode.HALF_EVEN);
+    FiatCurrencyType fiatCurrencyType;
     
-    
-    public Allowance(AllowanceType _allowanceType)
+    public AllowanceFiat(AllowanceType _allowanceType, FiatCurrencyType _fiatCurrencyType)
     {
-        allowanceType = _allowanceType;
-        System.err.println("DEBUG: starting value " + allowanceAmount);
+        super(_allowanceType);
+        fiatCurrencyType = _fiatCurrencyType;
     }
     
-    public AllowanceType getAllowanceType()
+    public FiatCurrencyType getFiatCurrencyType()
     {
-        return this.allowanceType;
+        return this.fiatCurrencyType;
     }
-    
-    public BigDecimal getAllowance()
-    {
-        return allowanceAmount; 
-    }
-    
-    public void resetAllowance()
-    {
-        allowanceAmount = new BigDecimal(0.0).setScale(8, RoundingMode.HALF_EVEN);
-    }
-    
-    public void addToAllowance(BigDecimal _amountToAdd)
-    {
-        allowanceAmount = allowanceAmount.add(_amountToAdd);
-    }
-         
 }
