@@ -25,6 +25,7 @@ import cryptomoney.autotask.allowance.*;
 import cryptomoney.autotask.functions.SharedFunctions;
 import cryptomoney.autotask.currency.CoinCurrencyType;
 import cryptomoney.autotask.currency.FiatCurrencyType;
+import cryptomoney.autotask.exchangeaccount.WalletAccountCurrency;
 
 import java.math.BigDecimal;
 import java.math.BigInteger;
@@ -34,21 +35,21 @@ import java.math.RoundingMode;
  * Dollar cost averaging coinbase pro using post-only method (most complicated but 0% fee)
  * @author onyxcoyote <no-reply@onyxcoyote.com>
  */
-public class RuleAction_BuyBTCDCAPostOnly extends Rule
+public class RuleAction_BuyCoinDCAPostOnly extends Rule
 {
     private CoinCurrencyType coinCurrencyType;
     private FiatCurrencyType fiatCurrencyType;
     private double maximumAvgOccurrencesPerDay;
-    private double minimumQuantityBuyUSD;
+    private double minimumQuantityBuyCurrency;
     private double minimumQuantityCoinThreshold;
     private double maximumQuantityCoin;
     private double randomChanceToProceed;
     private int executionCount = 0; //if we set this to 999999 then it would execute right away upon running program (maybe)
 
     
-    public RuleAction_BuyBTCDCAPostOnly()
+    public RuleAction_BuyCoinDCAPostOnly()
     {
-        super(RuleType.ACTION, ActionType.ACTION_BUY_BTC_DCA_POSTONLY);
+        super(RuleType.ACTION, ActionType.ACTION_BUY_COIN_DCA_POSTONLY);
     }
     
     /**
@@ -58,18 +59,18 @@ public class RuleAction_BuyBTCDCAPostOnly extends Rule
      *   3) add a random delay, e.g. 0.15 percent chance to proceed may delay 7 times (5 seconds each)
      * 
      * @param _maximumAvgOccurrencesPerDay
-     * @param _minimumQuantityBuyUSD
+     * @param _minimumQuantityBuyCurrency
      * @param _minimumQuantityCoinThreshold
      * @param _maximumQuantityCoin
      * @param _randomChanceToProceed  decimal between 0 and 1, e.g. 25% change is 0.25.  This only delays it until the next INTERVAL (e.g. 5 seconds), not even next execution.  Does not reset any other timers.
      */
-    public RuleAction_BuyBTCDCAPostOnly(CoinCurrencyType _coinCurrencyType, FiatCurrencyType _fiatCurrencyType, boolean _executeImmediately, double _maximumAvgOccurrencesPerDay, double _minimumQuantityBuyUSD, double _minimumQuantityCoinThreshold, double _maximumQuantityCoin, double _randomChanceToProceed)
+    public RuleAction_BuyCoinDCAPostOnly(CoinCurrencyType _coinCurrencyType, FiatCurrencyType _fiatCurrencyType, boolean _executeImmediately, double _maximumAvgOccurrencesPerDay, double _minimumQuantityBuyCurrency, double _minimumQuantityCoinThreshold, double _maximumQuantityCoin, double _randomChanceToProceed)
     {
-        super(RuleType.ACTION, ActionType.ACTION_BUY_BTC_DCA_POSTONLY);
+        super(RuleType.ACTION, ActionType.ACTION_BUY_COIN_DCA_POSTONLY);
         coinCurrencyType = _coinCurrencyType;
         fiatCurrencyType = _fiatCurrencyType;
         maximumAvgOccurrencesPerDay = _maximumAvgOccurrencesPerDay;
-        minimumQuantityBuyUSD = _minimumQuantityBuyUSD;
+        minimumQuantityBuyCurrency = _minimumQuantityBuyCurrency;
         minimumQuantityCoinThreshold = _minimumQuantityCoinThreshold;
         maximumQuantityCoin = _maximumQuantityCoin;
         randomChanceToProceed = _randomChanceToProceed;
@@ -99,9 +100,9 @@ public class RuleAction_BuyBTCDCAPostOnly extends Rule
         
         executionCount++;
         
-        if(getAssociatedAllowance().getAllowance().doubleValue() <= this.minimumQuantityBuyUSD)
+        if(getAssociatedAllowance().getAllowance().doubleValue() <= this.minimumQuantityBuyCurrency)
         {
-            CryptomoneyAutotask.logProv.LogMessage(getHelpString() + " coinAmountToPurchaseRough does not exceed this.minimumQuantityCoinThreshold " + getAssociatedAllowance().getAllowance().setScale(2, RoundingMode.HALF_EVEN) + "/" + this.minimumQuantityBuyUSD);
+            CryptomoneyAutotask.logProv.LogMessage(getHelpString() + " coinAmountToPurchaseRough does not exceed this.minimumQuantityCoinThreshold " + getAssociatedAllowance().getAllowance().setScale(2, RoundingMode.HALF_EVEN) + "/" + this.minimumQuantityBuyCurrency);
             return;
         }
         
@@ -183,7 +184,7 @@ public class RuleAction_BuyBTCDCAPostOnly extends Rule
             //make sure we have sufficient funds
             BigDecimal estimatedCostOfBuy = coinAmountToPurchase.multiply(BTCPriceInUSD);
             estimatedCostOfBuy = estimatedCostOfBuy.multiply(new BigDecimal(1.003));
-            Account usdAcct = this.account.getCoinbaseProUSDAccount();
+            Account usdAcct = this.account.getCoinbaseProWalletAccount(WalletAccountCurrency.valueOf(this.fiatCurrencyType.toString()));
             if(usdAcct.getAvailable().doubleValue() < estimatedCostOfBuy.doubleValue()) //asume we might need to pay the 0.3% fee (only in some situations
             {
                 String logInfo = "insufficient funds to buy, not proceeding " + usdAcct.getAvailable().doubleValue() + " < " + estimatedCostOfBuy.doubleValue();
@@ -245,7 +246,7 @@ public class RuleAction_BuyBTCDCAPostOnly extends Rule
     {
         return this.getRuleType() + " " + this.getActionType() 
             + " maximumAvgOccurrencesPerDay:" + maximumAvgOccurrencesPerDay
-            + " minimumQuantityBuyUSD:" + minimumQuantityBuyUSD
+            + " minimumQuantityBuyUSD:" + minimumQuantityBuyCurrency
             + " minimumQuantityCoinThreshold:" + minimumQuantityCoinThreshold
             + " maximumQuantityCoin:" + maximumQuantityCoin
             + " randomChanceToProceed:" + randomChanceToProceed

@@ -25,7 +25,7 @@ import java.util.ArrayList;
 public class CoinSafetyLimits
 {
     
-    private ArrayList<CoinSafetyLimit> limits;
+    private ArrayList<CoinSafetyLimit> limits = new ArrayList<>();
     
     public void addLimit(CoinSafetyLimit limit)
     {

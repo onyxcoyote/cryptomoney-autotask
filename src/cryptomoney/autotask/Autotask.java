@@ -16,26 +16,19 @@
  */
 package cryptomoney.autotask;
 
-import java.text.DecimalFormat;
 import java.util.ArrayList;
 
 
 
 import com.coinbase.exchange.api.orders.OrderService;
 import com.coinbase.exchange.api.accounts.Account;
-import com.coinbase.exchange.api.exchange.GdaxExchangeImpl;
-import com.coinbase.exchange.api.exchange.Signature;
-
-
-import lsoc.library.providers.logging.ILoggingProvider;
-import lsoc.library.providers.logging.LoggingProviderSimple;
 
 import cryptomoney.autotask.exchangeaccount.ExchangeAccount;
 import cryptomoney.autotask.currency.*;
-import cryptomoney.autotask.rule.ActionType;
+import cryptomoney.autotask.exchangeaccount.WalletAccountCurrency;
 import cryptomoney.autotask.rule.Rule;
-import cryptomoney.autotask.rule.RuleAction_BuyBTCDCAPostOnly;
-import cryptomoney.autotask.rule.RuleAllowance_WithdrawBTCToCoinbase;
+import cryptomoney.autotask.rule.RuleAction_BuyCoinDCAPostOnly;
+import cryptomoney.autotask.rule.RuleAllowance_WithdrawCoinToCoinbase;
 import cryptomoney.autotask.rule.RuleType;
 import cryptomoney.autotask.rule.*;
 
@@ -106,7 +99,7 @@ public class Autotask
     
     public void Run()
     {
-        Initialize(account1);
+        Initialize(account1); //TODO: credentials/exchange info should probably tie to account instead of being static params
         
         //CancelOpenOrders();
         
@@ -127,7 +120,7 @@ public class Autotask
             System.exit(1);
         }
         ValidateRules();
-        TestAccountAPI(_account);
+        TestAccountAPI();
         
         //todo: https://docs.pro.coinbase.com/#get-products min BTC purchase size can change in the future
     }
@@ -140,15 +133,15 @@ public class Autotask
         
     private void LoadRuleHelp()
     {
-        availableRules.add(new RuleAction_BuyBTCDCAPostOnly());
-        availableRules.add(new RuleAction_DepositUSD());
-        availableRules.add(new RuleAction_WithdrawBTCToCoinbase());
+        availableRules.add(new RuleAction_BuyCoinDCAPostOnly());
+        availableRules.add(new RuleAction_DepositFiat());
+        availableRules.add(new RuleAction_WithdrawCoinToCoinbase());
         
-        availableRules.add(new RuleAction_ProcessBTCBuyPostOrders());
+        availableRules.add(new RuleAction_ProcessCoinBuyPostOrders());
         
-        availableRules.add(new RuleAllowance_BuyBTC());
-        availableRules.add(new RuleAllowance_DepositUSD());
-        availableRules.add(new RuleAllowance_WithdrawBTCToCoinbase());
+        availableRules.add(new RuleAllowance_BuyCoin());
+        availableRules.add(new RuleAllowance_DepositFiat());
+        availableRules.add(new RuleAllowance_WithdrawCoinToCoinbase());
         
         availableRules.add(new RuleAlarm_PrintBalance());
               
@@ -215,7 +208,7 @@ public class Autotask
             {
                 throw new Exception("ACTION_BUY_COIN_DCA_POSTONLY__amountPerDayUS exceeds hard-coded safe maximum");
             }
-            RuleAllowance_BuyBTC allowance_buyBTC = new RuleAllowance_BuyBTC(
+            RuleAllowance_BuyCoin allowance_buyBTC = new RuleAllowance_BuyCoin(
                     coinCurrencyType, 
                     fiatCurrencyType, 
                     executeImmediately, 
@@ -223,16 +216,16 @@ public class Autotask
             rules.add(allowance_buyBTC);
             
             //PROCESS ORDERS RULE
-            double ACTION_PROCESS_BTC_BUY_POST_ORDERS__maximumAvgOccurrencesPerDay = Double.parseDouble(CryptomoneyAutotask.config.getConfigString("ACTION_BUY_COIN_DCA_POSTONLY__PROCESS_BTC_BUY_POST_ORDERS__maximumAvgOccurrencesPerDay"));
-            if(ACTION_PROCESS_BTC_BUY_POST_ORDERS__maximumAvgOccurrencesPerDay < 0 || ACTION_PROCESS_BTC_BUY_POST_ORDERS__maximumAvgOccurrencesPerDay > MAXIMUM_SAFE_NUMBER_OF_EXECUTIONS_PER_DAY)
+            double ACTION_BUY_COIN_DCA_POSTONLY__PROCESS_COIN_BUY_POST_ORDERS__maximumAvgOccurrencesPerDay = Double.parseDouble(CryptomoneyAutotask.config.getConfigString("ACTION_BUY_COIN_DCA_POSTONLY__PROCESS_COIN_BUY_POST_ORDERS__maximumAvgOccurrencesPerDay"));
+            if(ACTION_BUY_COIN_DCA_POSTONLY__PROCESS_COIN_BUY_POST_ORDERS__maximumAvgOccurrencesPerDay < 0 || ACTION_BUY_COIN_DCA_POSTONLY__PROCESS_COIN_BUY_POST_ORDERS__maximumAvgOccurrencesPerDay > MAXIMUM_SAFE_NUMBER_OF_EXECUTIONS_PER_DAY)
             {
-                throw new Exception("ACTION_BUY_COIN_DCA_POSTONLY__PROCESS_BTC_BUY_POST_ORDERS__maximumAvgOccurrencesPerDay exceeds hard-coded safe maximum");
+                throw new Exception("ACTION_BUY_COIN_DCA_POSTONLY__PROCESS_COIN_BUY_POST_ORDERS__maximumAvgOccurrencesPerDay exceeds hard-coded safe maximum");
             }            
-            RuleAction_ProcessBTCBuyPostOrders action_processOrders = new RuleAction_ProcessBTCBuyPostOrders(
+            RuleAction_ProcessCoinBuyPostOrders action_processOrders = new RuleAction_ProcessCoinBuyPostOrders(
                     coinCurrencyType, 
                     fiatCurrencyType, 
                     executeImmediately, 
-                    ACTION_PROCESS_BTC_BUY_POST_ORDERS__maximumAvgOccurrencesPerDay);
+                    ACTION_BUY_COIN_DCA_POSTONLY__PROCESS_COIN_BUY_POST_ORDERS__maximumAvgOccurrencesPerDay);
             rules.add(action_processOrders);
             
             
@@ -265,7 +258,7 @@ public class Autotask
                 throw new Exception("ACTION_BUY_COIN_DCA_POSTONLY__randomChanceToProceed exceeds hard-coded safe maximum");
             }          
                     
-            RuleAction_BuyBTCDCAPostOnly action1 = new RuleAction_BuyBTCDCAPostOnly(
+            RuleAction_BuyCoinDCAPostOnly action1 = new RuleAction_BuyCoinDCAPostOnly(
                     coinCurrencyType,
                     fiatCurrencyType,
                     executeImmediately,
@@ -291,7 +284,7 @@ public class Autotask
             {
                 throw new Exception("ACTION_WITHDRAW_COIN_TO_COINBASE__amountPerDayCurrencyQuantity exceeds hard-coded safe maximum");
             }
-            RuleAllowance_WithdrawBTCToCoinbase allowanceBTCtoCoinbase = new RuleAllowance_WithdrawBTCToCoinbase(
+            RuleAllowance_WithdrawCoinToCoinbase allowanceBTCtoCoinbase = new RuleAllowance_WithdrawCoinToCoinbase(
                     coinCurrencyType,
                     fiatCurrencyType, 
                     executeImmediately, 
@@ -317,7 +310,7 @@ public class Autotask
                 throw new Exception("ACTION_WITHDRAW_COIN_TO_COINBASE__maximumCurrencyQuantity exceeds hard-coded safe maximum");
             }
             
-            RuleAction_WithdrawBTCToCoinbase action2 = new RuleAction_WithdrawBTCToCoinbase(
+            RuleAction_WithdrawCoinToCoinbase action2 = new RuleAction_WithdrawCoinToCoinbase(
                     coinCurrencyType,
                     fiatCurrencyType,                     
                     executeImmediately,
@@ -340,7 +333,7 @@ public class Autotask
             {
                 throw new Exception("ACTION_DEPOSIT_FIAT__amountPerDayCurrencyQuantity exceeds hard-coded safe maximum");
             }
-            RuleAllowance_DepositUSD allowanceDepositUSD = new RuleAllowance_DepositUSD(
+            RuleAllowance_DepositFiat allowanceDepositUSD = new RuleAllowance_DepositFiat(
                     fiatCurrencyType,
                     executeImmediately, 
                     ACTION_DEPOSIT_FIAT__amountPerDayCurrencyQuantity);
@@ -365,7 +358,7 @@ public class Autotask
                 throw new Exception("ACTION_DEPOSIT_FIAT__maximumCurrencyQuantity exceeds hard-coded safe maximum");
             }
             
-            RuleAction_DepositUSD action3 = new RuleAction_DepositUSD(
+            RuleAction_DepositFiat action3 = new RuleAction_DepositFiat(
                     fiatCurrencyType,
                     executeImmediately,
                     ACTION_DEPOSIT_FIAT__maximumAvgOccurrencesPerDay, 
@@ -400,10 +393,9 @@ public class Autotask
         
     }
     
-    private void TestAccountAPI(ExchangeAccount _acct)
+    private void TestAccountAPI()
     {
-        Account testConnection = _acct.getCoinbaseProUSDAccount();
-        if(testConnection == null)
+        if(CryptomoneyAutotask.accountService.getAccounts() == null) //API call
         {
             CryptomoneyAutotask.logMultiplexer.LogMessage("Unable to retrieve coinbase pro account, possible problem with authentication. See STDOUT.");  
             System.exit(1);

@@ -31,7 +31,7 @@ import com.coinbase.exchange.api.payments.PaymentType;
 
 
 import cryptomoney.autotask.CryptomoneyAutotask;
-import cryptomoney.autotask.exchangeaccount.ExchangeType;
+import cryptomoney.autotask.exchangeaccount.*;
 import cryptomoney.autotask.allowance.*;
 import cryptomoney.autotask.currency.*;
 
@@ -61,21 +61,22 @@ public class ExchangeAccount
     
     public ArrayList<AllowanceFiat> allowancesFiat = new ArrayList<>();
     public ArrayList<AllowanceCoinFiat> allowancesCoinFiat = new ArrayList<>();
+    public WalletAccountIDs walletAccountIDs = new WalletAccountIDs();
     
     private HashMap<String, Order> orders = new HashMap<>();
     
     public int btcBuyFrequencyDesperation = 0; //todo: can this be refactored, maybe make it an object
     public static final int BTC_BUY_FREQUENCY_DESPERATION_THRESHOLD = 10;
     
-    private String coinbaseProUSDAccountId = null;
-    private String coinbaseProUSDBankPaymentTypeId = null;
-    private String coinbaseProBTCAccountId = null;
-    private String coinbaseRegularBTCAccountId = null;
+    //private String coinbaseProUSDAccountId = null;
+    //private String coinbaseProUSDBankPaymentTypeId = null;
+    //private String coinbaseProBTCAccountId = null;
+    //private String coinbaseRegularBTCAccountId = null;
     
-    private boolean has_coinbaseProUSDAccountId = false;
-    private boolean has_coinbaseProUSDBankPaymentTypeId = false;
-    private boolean has_coinbaseProBTCAccountId = false;
-    private boolean has_coinbaseRegularBTCAccountId = false;
+    //private boolean has_coinbaseProUSDAccountId = false;
+    //private boolean has_coinbaseProUSDBankPaymentTypeId = false;
+    //private boolean has_coinbaseProBTCAccountId = false;
+    //private boolean has_coinbaseRegularBTCAccountId = false;
     
     //private CoinCurrencyType coinCurrencyType;
     //private FiatCurrencyType fiatCurrencyType;
@@ -149,12 +150,12 @@ public class ExchangeAccount
      * This is needed for informational purposes only.  In most cases, it's only necessary to get the account_id.
      * @return 
      */
-    public CoinbaseAccount getCoinbaseRegularBTCAccountById(String _accountId)
+    public CoinbaseAccount getCoinbaseRegularAccountById(String _accountId)
     {
         List<CoinbaseAccount> coinbaseAccounts = CryptomoneyAutotask.paymentService.getCoinbaseAccounts(); //optional: instead of this get the id somehow else and code it into config?
         CryptomoneyAutotask.logProv.LogMessage("retrieved coinbase accounts, count: "+coinbaseAccounts.size());
 
-        CoinbaseAccount btcCoinbaseAccount = null;
+        CoinbaseAccount lookingForCoinbaseAccount = null;
         for(CoinbaseAccount coinbaseAccount : coinbaseAccounts)
         {
             CryptomoneyAutotask.logProv.LogMessage("coinbase account retrieved: " + coinbaseAccount.getId() + " " + 
@@ -166,24 +167,24 @@ public class ExchangeAccount
                     );
             if(coinbaseAccount.getId().equals(_accountId))
             {
-                if(btcCoinbaseAccount != null)
+                if(lookingForCoinbaseAccount != null)
                 {
-                    CryptomoneyAutotask.logMultiplexer.LogMessage("ERROR, TWO -PRIMARY- BTC ACCOUNTS FOUND WHEN EXPECTINE ONE, EXITING"); //todo: test this to make sure there would only be one account
+                    CryptomoneyAutotask.logMultiplexer.LogMessage("ERROR, TWO ACCOUNTS FOUND WITH THE SAME ID WHEN EXPECTINE ONE, EXITING"); //todo: test this to make sure there would only be one account
                         //in this case, I think there COULD be multiple accounts unless the getPrimary() takes care of it
                     System.exit(1);
                 }
-                btcCoinbaseAccount = coinbaseAccount;
+                lookingForCoinbaseAccount = coinbaseAccount;
             }
         }
 
-        if(btcCoinbaseAccount != null)
+        if(lookingForCoinbaseAccount != null)
         {
-            CryptomoneyAutotask.logMultiplexer.LogMessage("Unable to get coinbaseRegularBTCAccount. Exiting!");
+            CryptomoneyAutotask.logMultiplexer.LogMessage("Unable to get coinbaseRegular Account. Exiting!");
             System.exit(1);
         }
         else
         {
-            return btcCoinbaseAccount;
+            return lookingForCoinbaseAccount;
         }
         
         CryptomoneyAutotask.logMultiplexer.LogMessage("Impossible situation getCoinbaseRegularBTCAccountById. Exiting!");
@@ -195,18 +196,21 @@ public class ExchangeAccount
      * API CALL
      * @return 
      */
-    public String getCoinbaseRegularBTCAccount_Id()
+    public String getCoinbaseRegularAccount_Id(WalletAccountCurrency _walletAccountCurrency)
     {
-        if(coinbaseRegularBTCAccountId != null)
+        WalletAccountID walletAccountId = this.walletAccountIDs.getAccountID(WalletAccountType.CoinbaseRegularWallet, _walletAccountCurrency, false);
+        
+        if(walletAccountId.getAccount_Id() == null)
+        //if(coinbaseRegularBTCAccountId != null)  This needs to be an array too
         {
-            return coinbaseRegularBTCAccountId;
+            return walletAccountId.getAccount_Id();
         }
         else
         {
             List<CoinbaseAccount> coinbaseAccounts = CryptomoneyAutotask.paymentService.getCoinbaseAccounts(); //optional: instead of this get the id somehow else and code it into config?
             CryptomoneyAutotask.logProv.LogMessage("retrieved coinbase accounts, count: "+coinbaseAccounts.size());
 
-            CoinbaseAccount btcCoinbaseAccount = null;
+            CoinbaseAccount lookingForCoinbaseAccount = null;
             for(CoinbaseAccount coinbaseAccount : coinbaseAccounts)
             {
                 CryptomoneyAutotask.logProv.LogMessage("coinbase account retrieved: " + coinbaseAccount.getId() + " " + 
@@ -216,28 +220,36 @@ public class ExchangeAccount
                         coinbaseAccount.getBalance() + " " + 
                         coinbaseAccount.getName()
                         );
-                if(coinbaseAccount.getCurrency().equals("BTC") && coinbaseAccount.getPrimary())
+                if(coinbaseAccount.getCurrency().equals(_walletAccountCurrency.toString()) && coinbaseAccount.getPrimary())
                 {
-                    if(btcCoinbaseAccount != null)
+                    if(lookingForCoinbaseAccount != null)
                     {
-                        CryptomoneyAutotask.logMultiplexer.LogMessage("ERROR, TWO -PRIMARY- BTC ACCOUNTS FOUND WHEN EXPECTINE ONE, EXITING"); //todo: test this to make sure there would only be one account
+                        CryptomoneyAutotask.logMultiplexer.LogMessage("ERROR, TWO -PRIMARY- ACCOUNTS OF TYPE " + _walletAccountCurrency.toString() + " FOUND WHEN EXPECTINE ONE, EXITING"); //todo: test this to make sure there would only be one account
                             //in this case, I think there COULD be multiple accounts unless the getPrimary() takes care of it
                         System.exit(1);
                     }
-                    btcCoinbaseAccount = coinbaseAccount;
+                    lookingForCoinbaseAccount = coinbaseAccount;
                 }
             }
             
-            if(btcCoinbaseAccount == null)
+            if(lookingForCoinbaseAccount == null)
             {
-                CryptomoneyAutotask.logMultiplexer.LogMessage("Unable to get coinbaseRegularBTCAccount_Id. Exiting!");
+                CryptomoneyAutotask.logMultiplexer.LogMessage("Unable to get coinbaseRegularAccount Account_Id. Exiting!");
                 System.exit(1);
             }
             else
             {
-                this.coinbaseRegularBTCAccountId = btcCoinbaseAccount.getId();
-                this.has_coinbaseRegularBTCAccountId = true;
-                return coinbaseRegularBTCAccountId;
+                
+                try
+                {
+                    walletAccountId.setAccount_Id(lookingForCoinbaseAccount.getId());
+                }
+                catch(Exception ex)
+                {
+                    CryptomoneyAutotask.logMultiplexer.LogException(ex);
+                    System.exit(1);
+                }
+                return walletAccountId.getAccount_Id();
             }
         }
         
@@ -246,65 +258,18 @@ public class ExchangeAccount
         return null;        
     }
     
-    public Account getCoinbaseProBTCAccount()
-    {
-        if(coinbaseProBTCAccountId != null)
-        {
-            Account acct = CryptomoneyAutotask.accountService.getAccount(coinbaseProBTCAccountId);
-            if(acct == null)
-            {
-                this.coinbaseProBTCAccountId = null; //reset, account wasn't found
-            }
-            return acct;
-        }
-        else
-        {
-            List<Account> accounts = CryptomoneyAutotask.accountService.getAccounts();
-            CryptomoneyAutotask.logProv.LogMessage("retrieved coinbase PRO accounts, count: "+accounts.size());
-
-            Account btcAccount = null;
-            for(Account acct : accounts)
-            {
-                CryptomoneyAutotask.logProv.LogMessage("CPB account retrieved: " + acct.getId() + " " + acct.getCurrency() + " " + acct.getAvailable() + "/" + acct.getBalance());
-                if(acct.getCurrency().equals("BTC"))
-                {
-                    if(btcAccount != null)
-                    {
-                        CryptomoneyAutotask.logMultiplexer.LogMessage("ERROR, TWO BTC ACCOUNTS FOUND WHEN EXPECTING ONE, EXITING"); //todo: test this to make sure there would only be one account
-                        System.exit(1);
-                    }
-                    btcAccount = acct;
-                }
-            }
-            
-            if(btcAccount == null)
-            {
-                CryptomoneyAutotask.logMultiplexer.LogMessage("Unable to get getCoinbaseProBTCAccount. Exiting!");
-                System.exit(1);
-            }
-            else
-            {
-                this.coinbaseProBTCAccountId = btcAccount.getId();
-                this.has_coinbaseProBTCAccountId = true;
-                return btcAccount;
-            }
-        }
-                
-        CryptomoneyAutotask.logMultiplexer.LogMessage("Impossible situation getCoinbaseProBTCAccount. Exiting!");
-        System.exit(1);
-        return null;
-    }
-    
     /**
      * get unique id representing bank account used to fund coinbase pro
      * Sometimes API call
      * @return 
      */
-    public String getCoinbaseProUSDBankPaymentType_Id()
+    public String getCoinbaseProPaymentType_AccountId(WalletAccountCurrency _walletAccountCurrency)
     {
-        if(coinbaseProUSDBankPaymentTypeId != null)
+        WalletAccountID walletAccountId = this.walletAccountIDs.getAccountID(WalletAccountType.CoinbaseProPaymentType, _walletAccountCurrency, false);
+        
+        if(walletAccountId.getAccount_Id() != null)
         {
-            return this.coinbaseProUSDBankPaymentTypeId; //only this info is needed usually
+            return walletAccountId.getAccount_Id(); //only this info is needed usually
         }
         else
         {
@@ -315,11 +280,11 @@ public class ExchangeAccount
             for(PaymentType paymentType : paymentTypes)
             {
                 CryptomoneyAutotask.logProv.LogMessage("paymentType account retrieved: " + paymentType.getAllow_buy() + " " + paymentType.getId() + " " + paymentType.getName() + " " + paymentType.getType()); //todo: keep this, shows last 4 digit bank#?
-                if(paymentType.getCurrency().equals("USD") && paymentType.getPrimary_buy()) //todo: abstract away USD and BTC
+                if(paymentType.getCurrency().equals(_walletAccountCurrency.toString()) && paymentType.getPrimary_buy())
                 {
                     if(paymentTypeBank != null)
                     {
-                        CryptomoneyAutotask.logProv.LogMessage("ERROR, TWO -PRIMARY BUY- BANK ACCOUNTS FOUND WHEN EXPECTINE ONE, EXITING"); //todo: test this to make sure there would only be one account
+                        CryptomoneyAutotask.logProv.LogMessage("ERROR, TWO -PRIMARY BUY- PAYMENT TYPE " + _walletAccountCurrency.toString() + " ACCOUNTS FOUND WHEN EXPECTINE ONE, EXITING"); //todo: test this to make sure there would only be one account
                         System.exit(1);
                     }
                     paymentTypeBank = paymentType;
@@ -329,75 +294,83 @@ public class ExchangeAccount
 
             if(paymentTypeBank == null)
             {
-                CryptomoneyAutotask.logMultiplexer.LogMessage("Unable to get getCoinbaseProUSDBankPaymentType_Id. Exiting!");
+                CryptomoneyAutotask.logMultiplexer.LogMessage("Unable to get getCoinbasePro PaymentType_Id. Exiting!");
                 System.exit(1);
             }
             else
             {
-                this.coinbaseProUSDBankPaymentTypeId = paymentTypeBank.getId();
-                this.has_coinbaseProUSDBankPaymentTypeId = true;
-                return paymentTypeBank.getId();
+                try
+                {
+                    walletAccountId.setAccount_Id(paymentTypeBank.getId());
+                }
+                catch(Exception ex)
+                {
+                    CryptomoneyAutotask.logMultiplexer.LogException(ex);
+                    System.exit(1);
+                }
+                return walletAccountId.getAccount_Id();
             }
         }
         
-        CryptomoneyAutotask.logMultiplexer.LogMessage("Impossible situation coinbaseProUSDAccount. Exiting!");
+        CryptomoneyAutotask.logMultiplexer.LogMessage("Impossible situation coinbasePro payment type. Exiting!");
         System.exit(1);
         return null;
     }
     
-    /**
-     * If we know the account ID, retrieve just that one, otherwise retrieve all, find it, and save the account ID for later use.
-     * CALLS API
-     * @return 
-     */
-    public Account getCoinbaseProUSDAccount()
+    public Account getCoinbaseProWalletAccount(WalletAccountCurrency _walletAccountCurrency)
     {
-        if(coinbaseProUSDAccountId != null)
+        WalletAccountID walletAccountId = this.walletAccountIDs.getAccountID(WalletAccountType.CoinbaseProWallet, _walletAccountCurrency, false);
+        
+        if(walletAccountId.getAccount_Id() != null)
         {
-            Account acct = CryptomoneyAutotask.accountService.getAccount(this.coinbaseProUSDAccountId);
-            if(acct == null)
-            {
-                this.coinbaseProUSDAccountId = null; //reset, account wasn't found
-            }
+            Account acct = CryptomoneyAutotask.accountService.getAccount(walletAccountId.getAccount_Id());
             return acct;
         }
         else
         {
             List<Account> accounts = CryptomoneyAutotask.accountService.getAccounts();
+            CryptomoneyAutotask.logProv.LogMessage("retrieved coinbase PRO accounts, count: "+accounts.size());
 
-            Account usdAccount = null;
+            Account lookingForAccount = null;
             for(Account acct : accounts)
             {
-                CryptomoneyAutotask.logProv.LogMessage("CPB account retrieved: " + acct.getId() + " " + acct.getCurrency() + " " + acct.getAvailable() + "/" + acct.getBalance());
-                if(acct.getCurrency().equals("USD"))
+                CryptomoneyAutotask.logProv.LogMessage("CoinbasePro account retrieved: " + acct.getId() + " " + acct.getCurrency() + " " + acct.getAvailable() + "/" + acct.getBalance());
+                if(acct.getCurrency().equals(_walletAccountCurrency.toString()))
                 {
-                    if(usdAccount != null)
+                    if(lookingForAccount != null)
                     {
-                        CryptomoneyAutotask.logMultiplexer.LogMessage("ERROR, TWO BTC ACCOUNTS FOUND WHEN EXPECTINE ONE, EXITING"); //todo: test this to make sure there would only be one account
+                        CryptomoneyAutotask.logMultiplexer.LogMessage("ERROR, TWO " + _walletAccountCurrency.toString() + " ACCOUNTS FOUND WHEN EXPECTING ONE, EXITING"); //todo: test this to make sure there would only be one account
                         System.exit(1);
                     }
-                    usdAccount = acct;
+                    lookingForAccount = acct;
                 }
             }
-
-            if(usdAccount == null)
+            
+            if(lookingForAccount == null)
             {
-                CryptomoneyAutotask.logMultiplexer.LogMessage("Unable to get coinbaseProUSDAccount. Exiting!");
+                CryptomoneyAutotask.logMultiplexer.LogMessage("Unable to get getCoinbasePro Account. Exiting!");
                 System.exit(1);
             }
             else
             {
-                this.coinbaseProUSDAccountId = usdAccount.getId();
-                this.has_coinbaseProUSDAccountId = true;
-                return usdAccount;
+                try
+                {
+                    walletAccountId.setAccount_Id(lookingForAccount.getId());
+                }
+                catch(Exception ex)
+                {
+                    CryptomoneyAutotask.logMultiplexer.LogException(ex);
+                    System.exit(1);
+                }
+                return lookingForAccount;
             }
         }
-        
-        CryptomoneyAutotask.logMultiplexer.LogMessage("Impossible situation getUSDCoinbaseProAccount. Exiting!");
+                
+        CryptomoneyAutotask.logMultiplexer.LogMessage("Impossible situation getCoinbasePro Account. Exiting!");
         System.exit(1);
         return null;
     }
-    
+
     
     //todo: move this elsewhere
     //todo: need to test successful fills
@@ -721,38 +694,6 @@ public class ExchangeAccount
         
         CryptomoneyAutotask.logMultiplexer.LogException(new Exception("unexpected result in buyCoinPostOnly"));
         return null;
-    }
-
-    /**
-     * @return the has_coinbaseProUSDAccountId
-     */
-    public boolean isHas_coinbaseProUSDAccountId()
-    {
-        return has_coinbaseProUSDAccountId;
-    }
-
-    /**
-     * @return the has_coinbaseProUSDBankPaymentTypeId
-     */
-    public boolean isHas_coinbaseProUSDBankPaymentTypeId()
-    {
-        return has_coinbaseProUSDBankPaymentTypeId;
-    }
-
-    /**
-     * @return the has_coinbaseProBTCAccountId
-     */
-    public boolean isHas_coinbaseProBTCAccountId()
-    {
-        return has_coinbaseProBTCAccountId;
-    }
-
-    /**
-     * @return the has_coinbaseRegularBTCAccountId
-     */
-    public boolean isHas_coinbaseRegularBTCAccountId()
-    {
-        return has_coinbaseRegularBTCAccountId;
     }
 
 

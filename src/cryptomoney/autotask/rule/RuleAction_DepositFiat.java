@@ -22,6 +22,7 @@ import com.coinbase.exchange.api.payments.PaymentType;
 import com.coinbase.exchange.api.entity.PaymentResponse;
 import cryptomoney.autotask.allowance.*;
 import cryptomoney.autotask.currency.FiatCurrencyType;
+import cryptomoney.autotask.exchangeaccount.WalletAccountCurrency;
 import cryptomoney.autotask.functions.SharedFunctions;
 import java.util.List;
 import java.math.BigDecimal;
@@ -31,7 +32,7 @@ import java.math.RoundingMode;
  *
  * @author onyxcoyote <no-reply@onyxcoyote.com>
  */
-public class RuleAction_DepositUSD extends Rule
+public class RuleAction_DepositFiat extends Rule
 {
     private FiatCurrencyType fiatCurrencyType;
     private double maximumAvgOccurrencesPerDay;
@@ -40,14 +41,14 @@ public class RuleAction_DepositUSD extends Rule
     
     private int executionCount = 0; //if we set this to 999999 then it would execute right away upon running program (maybe)
     
-    public RuleAction_DepositUSD()
+    public RuleAction_DepositFiat()
     {
-        super(RuleType.ACTION, ActionType.ACTION_DEPOSIT_USD);
+        super(RuleType.ACTION, ActionType.ACTION_DEPOSIT_FIAT);
     }
     
-    public RuleAction_DepositUSD(FiatCurrencyType _fiatCurrencyType, boolean _executeImmediately, double _maximumAvgOccurrencesPerDay, double _minimumUSDQuantityThreshold, double _maximumUSDQuantity)
+    public RuleAction_DepositFiat(FiatCurrencyType _fiatCurrencyType, boolean _executeImmediately, double _maximumAvgOccurrencesPerDay, double _minimumUSDQuantityThreshold, double _maximumUSDQuantity)
     {
-        super(RuleType.ACTION, ActionType.ACTION_DEPOSIT_USD);
+        super(RuleType.ACTION, ActionType.ACTION_DEPOSIT_FIAT);
         fiatCurrencyType = _fiatCurrencyType;
         maximumAvgOccurrencesPerDay = _maximumAvgOccurrencesPerDay;
         minimumUSDQuantityThreshold = _minimumUSDQuantityThreshold;
@@ -117,7 +118,7 @@ public class RuleAction_DepositUSD extends Rule
            amountToDeposit = amountToDeposit.subtract(amountAboveMax);
         }
 
-        String paymentTypeBank_Id = this.account.getCoinbaseProUSDBankPaymentType_Id();
+        String paymentTypeBank_Id = this.account.getCoinbaseProPaymentType_AccountId(WalletAccountCurrency.valueOf(this.fiatCurrencyType.toString()));
         
         if(paymentTypeBank_Id == null)
         {

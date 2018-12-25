@@ -25,7 +25,7 @@ import java.util.ArrayList;
 public class FiatSafetyLimits
 {
     
-    private ArrayList<FiatSafetyLimit> limits;
+    private ArrayList<FiatSafetyLimit> limits = new ArrayList<>();
     
     public void addLimit(FiatSafetyLimit limit)
     {

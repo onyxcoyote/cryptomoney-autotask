@@ -23,6 +23,7 @@ import com.coinbase.exchange.api.payments.CoinbaseAccount;
 import com.coinbase.exchange.api.payments.PaymentType;
 
 import cryptomoney.autotask.CryptomoneyAutotask;
+import cryptomoney.autotask.exchangeaccount.*;
 import cryptomoney.autotask.functions.SharedFunctions;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
@@ -94,34 +95,29 @@ public class RuleAlarm_PrintBalance extends Rule
             
         }
         
-        
-        if(this.account.isHas_coinbaseProBTCAccountId())
+        //enumerate possible options (even impossible ones, it will only show those have been loaded into memory)
+        for(WalletAccountCurrency curr : WalletAccountCurrency.values())
         {
-            Account acct = this.account.getCoinbaseProBTCAccount();
-            CryptomoneyAutotask.logMultiplexer.LogMessage("Coinbase PRO " + acct.getCurrency() + " " + acct.getAvailable() + " " + acct.getBalance());
+            //coinbase pro
+            if(this.account.walletAccountIDs.getAccountID(WalletAccountType.CoinbaseProWallet, curr, true) != null)
+            {
+                Account acct = this.account.getCoinbaseProWalletAccount(curr);
+                CryptomoneyAutotask.logMultiplexer.LogMessage("Coinbase PRO " + acct.getCurrency() + " " + acct.getAvailable() + " " + acct.getBalance());
+            }
+            
+            //Coinbase regular
+            if(this.account.walletAccountIDs.getAccountID(WalletAccountType.CoinbaseRegularWallet, curr, true) != null)
+            {
+                String account_id = this.account.getCoinbaseRegularAccount_Id(curr);
+                CoinbaseAccount acct = this.account.getCoinbaseRegularAccountById(account_id);
+                CryptomoneyAutotask.logMultiplexer.LogMessage("Coinbase (regular) " + acct.getCurrency() + " " + acct.getBalance());
+            }
         }
-        
-        if(this.account.isHas_coinbaseProUSDAccountId())
+        /*if(this.account.isHas_coinbaseProUSDBankPaymentTypeId()) //nothing to display, can't show balances, etc.
         {
-            Account acct = this.account.getCoinbaseProUSDAccount();
-            CryptomoneyAutotask.logMultiplexer.LogMessage("Coinbase PRO " + acct.getCurrency() + " " + acct.getAvailable() + " " + acct.getBalance());
-        }
-        
-        /*if(this.account.isHas_coinbaseProUSDBankPaymentTypeId())
-        {
-            //nothing to display
             //String acct_id = this.account.getCoinbaseProUSDBankPaymentType_Id();
             //CryptomoneyAutotask.logMultiplexer.LogMessage(acct.getCurrency() + " " + acct.getAvailable() + " " + acct.getBalance());
         }*/
-        
-        if(this.account.isHas_coinbaseRegularBTCAccountId())
-        {
-            String account_id = this.account.getCoinbaseRegularBTCAccount_Id();
-            CoinbaseAccount acct = this.account.getCoinbaseRegularBTCAccountById(account_id);
-            CryptomoneyAutotask.logMultiplexer.LogMessage("Coinbase (regular) " + acct.getCurrency() + " " + acct.getBalance());
-        }
-        
-        
         
         CryptomoneyAutotask.logProv.LogMessage("");
     }

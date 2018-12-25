@@ -29,7 +29,7 @@ import java.math.RoundingMode;
  *
  * @author onyxcoyote <no-reply@onyxcoyote.com>
  */
-public class RuleAction_ProcessBTCBuyPostOrders extends Rule
+public class RuleAction_ProcessCoinBuyPostOrders extends Rule
 {
     private CoinCurrencyType coinCurrencyType;
     private FiatCurrencyType fiatCurrencyType;
@@ -38,7 +38,7 @@ public class RuleAction_ProcessBTCBuyPostOrders extends Rule
     private int executionCount = 0; //if we set this to 999999 then it would execute right away upon running program (maybe)
 
     
-    public RuleAction_ProcessBTCBuyPostOrders()
+    public RuleAction_ProcessCoinBuyPostOrders()
     {
         super(RuleType.ACTION, ActionType.ACTION_PROCESS_BTC_BUY_POST_ORDERS);
     }
@@ -47,7 +47,7 @@ public class RuleAction_ProcessBTCBuyPostOrders extends Rule
      * 
      * @param _maximumAvgOccurrencesPerDay
      */
-    public RuleAction_ProcessBTCBuyPostOrders(CoinCurrencyType _coinCurrencyType, FiatCurrencyType _fiatCurrencyType, boolean _executeImmediately, double _maximumAvgOccurrencesPerDay)
+    public RuleAction_ProcessCoinBuyPostOrders(CoinCurrencyType _coinCurrencyType, FiatCurrencyType _fiatCurrencyType, boolean _executeImmediately, double _maximumAvgOccurrencesPerDay)
     {
         super(RuleType.ACTION, ActionType.ACTION_PROCESS_BTC_BUY_POST_ORDERS);
         coinCurrencyType = _coinCurrencyType;

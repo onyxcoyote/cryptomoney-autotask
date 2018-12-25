@@ -26,17 +26,17 @@ import java.math.BigDecimal;
  *
  * @author onyxcoyote <no-reply@onyxcoyote.com>
  */
-public class RuleAllowance_DepositUSD extends Rule
+public class RuleAllowance_DepositFiat extends Rule
 {
     private FiatCurrencyType fiatCurrencyType;    
     private double amountPerDayUSD;
     
-    public RuleAllowance_DepositUSD()
+    public RuleAllowance_DepositFiat()
     {
         super(RuleType.ALLOWANCE, ActionType.ALLOWANCE_DEPOSIT_USD);
     }
     
-    public RuleAllowance_DepositUSD(FiatCurrencyType _fiatCurrencyType, boolean _executeImmediately, double _amountPerDayUSD)
+    public RuleAllowance_DepositFiat(FiatCurrencyType _fiatCurrencyType, boolean _executeImmediately, double _amountPerDayUSD)
     {
         super(RuleType.ALLOWANCE, ActionType.ALLOWANCE_DEPOSIT_USD);
         fiatCurrencyType = _fiatCurrencyType;

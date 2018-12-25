@@ -14,25 +14,15 @@
     You should have received a copy of the GNU General Public License
     along with cryptomoney-autotask.  If not, see <https://www.gnu.org/licenses/>.
  */
-package cryptomoney.autotask.rule;
+package cryptomoney.autotask.exchangeaccount;
 
 /**
  *
  * @author onyxcoyote <no-reply@onyxcoyote.com>
  */
-public enum ActionType
+public enum WalletAccountType
 {
-    ALLOWANCE_BUY_BTC,
-    ALLOWANCE_WITHDRAW_BTC_TO_COINBASE,
-    ALLOWANCE_DEPOSIT_USD,
-    
-    ACTION_BUY_COIN_DCA_POSTONLY,
-    ACTION_WITHDRAW_COIN_TO_COINBASE,
-    ACTION_DEPOSIT_FIAT,
-    
-    ACTION_PROCESS_BTC_BUY_POST_ORDERS,
-    
-    ALARM_LOW_USD,
-    ALARM_LOW_BTC,
-    ALARM_PRINT_BALANCE
+    CoinbaseProWallet,       //e.g. could be USD, BTC, etc.
+    CoinbaseProPaymentType, //e.g. linked bank payment type
+    CoinbaseRegularWallet   //e.g.  could be USD, BTC, etc.
 }
