@@ -150,7 +150,7 @@ public class ExchangeAccount
      * This is needed for informational purposes only.  In most cases, it's only necessary to get the account_id.
      * @return 
      */
-    public CoinbaseAccount getCoinbaseRegularAccountById(String _accountId)
+    public CoinbaseAccount getCoinbaseRegularAccount_ById(String _accountId)
     {
         List<CoinbaseAccount> coinbaseAccounts = CryptomoneyAutotask.paymentService.getCoinbaseAccounts(); //optional: instead of this get the id somehow else and code it into config?
         CryptomoneyAutotask.logProv.LogMessage("retrieved coinbase accounts, count: "+coinbaseAccounts.size());
@@ -177,7 +177,7 @@ public class ExchangeAccount
             }
         }
 
-        if(lookingForCoinbaseAccount != null)
+        if(lookingForCoinbaseAccount == null)
         {
             CryptomoneyAutotask.logMultiplexer.LogMessage("Unable to get coinbaseRegular Account. Exiting!");
             System.exit(1);
@@ -200,8 +200,7 @@ public class ExchangeAccount
     {
         WalletAccountID walletAccountId = this.walletAccountIDs.getAccountID(WalletAccountType.CoinbaseRegularWallet, _walletAccountCurrency, false);
         
-        if(walletAccountId.getAccount_Id() == null)
-        //if(coinbaseRegularBTCAccountId != null)  This needs to be an array too
+        if(walletAccountId.getAccount_Id() != null)
         {
             return walletAccountId.getAccount_Id();
         }

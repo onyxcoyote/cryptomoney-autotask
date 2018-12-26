@@ -109,7 +109,7 @@ public class RuleAlarm_PrintBalance extends Rule
             if(this.account.walletAccountIDs.getAccountID(WalletAccountType.CoinbaseRegularWallet, curr, true) != null)
             {
                 String account_id = this.account.getCoinbaseRegularAccount_Id(curr);
-                CoinbaseAccount acct = this.account.getCoinbaseRegularAccountById(account_id);
+                CoinbaseAccount acct = this.account.getCoinbaseRegularAccount_ById(account_id);
                 CryptomoneyAutotask.logMultiplexer.LogMessage("Coinbase (regular) " + acct.getCurrency() + " " + acct.getBalance());
             }
         }

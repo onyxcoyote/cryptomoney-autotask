@@ -161,11 +161,12 @@ public class RuleAction_WithdrawCoinToCoinbase extends Rule
                     coinQuantityToWithdraw = new BigDecimal(maxCoinWithdrawQuantity).setScale(8, RoundingMode.FLOOR);
                 }
 
+                CryptomoneyAutotask.logMultiplexer.LogMessage("DEBUG: searching coinbase accounts for "+this.coinCurrencyType.toString());
                 String coinCoinbaseAccount_Id = this.account.getCoinbaseRegularAccount_Id(WalletAccountCurrency.valueOf(this.coinCurrencyType.toString()));
 
-                if(coinCoinbaseAccount_Id == null)
+                if(coinCoinbaseAccount_Id == null) 
                 {
-                    CryptomoneyAutotask.logMultiplexer.LogMessage("ERROR coinbase (coin) account not found");
+                    CryptomoneyAutotask.logMultiplexer.LogMessage("ERROR coinbase wallet "+this.coinCurrencyType.toString()+" account not found");
                     System.exit(1);
                 }
 
