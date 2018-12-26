@@ -33,7 +33,6 @@ public class Allowance
     public Allowance(AllowanceType _allowanceType)
     {
         allowanceType = _allowanceType;
-        System.err.println("DEBUG: starting value " + allowanceAmount);
     }
     
     public AllowanceType getAllowanceType()

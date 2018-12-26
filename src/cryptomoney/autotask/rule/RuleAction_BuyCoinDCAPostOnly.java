@@ -102,7 +102,7 @@ public class RuleAction_BuyCoinDCAPostOnly extends Rule
         
         if(getAssociatedAllowance().getAllowance().doubleValue() <= this.minimumQuantityBuyCurrency)
         {
-            CryptomoneyAutotask.logProv.LogMessage(getHelpString() + " coinAmountToPurchaseRough does not exceed this.minimumQuantityCoinThreshold " + getAssociatedAllowance().getAllowance().setScale(2, RoundingMode.HALF_EVEN) + "/" + this.minimumQuantityBuyCurrency);
+            CryptomoneyAutotask.logProv.LogMessage(getHelpString() + " coinAmountToPurchaseRough does not exceed this.minimumQuantityCoinThreshold " + getAssociatedAllowance().getAllowance().setScale(3, RoundingMode.HALF_EVEN) + "/" + this.minimumQuantityBuyCurrency);
             return;
         }
         
@@ -121,12 +121,9 @@ public class RuleAction_BuyCoinDCAPostOnly extends Rule
             {
                 executionCount-=numberOfExecutionsBeforeExecutingOnce;
 
-                for(int i=0;i<100 && executionCount > numberOfExecutionsBeforeExecutingOnce;i++)
+                if(executionCount > numberOfExecutionsBeforeExecutingOnce)
                 {
-                    if(executionCount > numberOfExecutionsBeforeExecutingOnce)
-                    {
-                        executionCount-=numberOfExecutionsBeforeExecutingOnce; //don't let it run a bunch of times in a row
-                    }
+                    executionCount = (int)Math.round(executionCount % numberOfExecutionsBeforeExecutingOnce); //modulo - reduces it to a number less than numberOfExecutionsBeforeExecutingOnce to prevent it from running thrice (or more) in sequence in case the executionCount built up a lot.
                 }
             }
             else
@@ -140,17 +137,17 @@ public class RuleAction_BuyCoinDCAPostOnly extends Rule
         
         //PROBABLY PROCEEDING WITH BUY
         
-        BigDecimal BTCPriceInUSD= SharedFunctions.GetBestCoinBuyPrice(this.coinCurrencyType, this.fiatCurrencyType).setScale(10, RoundingMode.HALF_EVEN); //API call
+        BigDecimal CoinPriceInFiat= SharedFunctions.GetBestCoinBuyPrice(this.coinCurrencyType, this.fiatCurrencyType).setScale(10, RoundingMode.HALF_EVEN); //API call
         
         BigDecimal coinAmountToPurchase;
         if(true) //this is just to reduce scope
         { 
             
             BigDecimal allowance = getAssociatedAllowance().getAllowance().setScale(10, RoundingMode.HALF_EVEN);
-            CryptomoneyAutotask.logProv.LogMessage("best BTC buy price: " + BTCPriceInUSD.toString());
-            CryptomoneyAutotask.logProv.LogMessage("allowanceBuyBTCinUSD: " + allowance);
+            CryptomoneyAutotask.logProv.LogMessage("best Coin buy price: " + CoinPriceInFiat.toString());
+            CryptomoneyAutotask.logProv.LogMessage("allowance (valued in fiat): " + allowance);
 
-            coinAmountToPurchase = allowance.divide(BTCPriceInUSD, RoundingMode.HALF_EVEN).setScale(8, RoundingMode.HALF_EVEN); //BTC max resolution is .00000001
+            coinAmountToPurchase = allowance.divide(CoinPriceInFiat, RoundingMode.HALF_EVEN).setScale(8, RoundingMode.HALF_EVEN); //BTC max resolution is .00000001, most coins are like that
         }
         //TODO: sanity check, don't let price be too far above 30 day average (or something).
 
@@ -170,8 +167,7 @@ public class RuleAction_BuyCoinDCAPostOnly extends Rule
             if(changedAllowance) 
             {
                 BigDecimal allowance = getAssociatedAllowance().getAllowance().setScale(10, RoundingMode.HALF_EVEN);
-                coinAmountToPurchase = allowance.divide(
-                        BTCPriceInUSD.setScale(10, RoundingMode.HALF_EVEN), 
+                coinAmountToPurchase = allowance.divide(CoinPriceInFiat.setScale(10, RoundingMode.HALF_EVEN), 
                         RoundingMode.HALF_EVEN
                     ).setScale(8, RoundingMode.HALF_EVEN); //temporary, might increase amount to buy if ours was cancelled or only partially filled or something
             }
@@ -182,12 +178,12 @@ public class RuleAction_BuyCoinDCAPostOnly extends Rule
             }
             
             //make sure we have sufficient funds
-            BigDecimal estimatedCostOfBuy = coinAmountToPurchase.multiply(BTCPriceInUSD);
+            BigDecimal estimatedCostOfBuy = coinAmountToPurchase.multiply(CoinPriceInFiat);
             estimatedCostOfBuy = estimatedCostOfBuy.multiply(new BigDecimal(1.003));
-            Account usdAcct = this.account.getCoinbaseProWalletAccount(WalletAccountCurrency.valueOf(this.fiatCurrencyType.toString()));
-            if(usdAcct.getAvailable().doubleValue() < estimatedCostOfBuy.doubleValue()) //asume we might need to pay the 0.3% fee (only in some situations
+            Account fiatAcct = this.account.getCoinbaseProWalletAccount(WalletAccountCurrency.valueOf(this.fiatCurrencyType.toString()));
+            if(fiatAcct.getAvailable().doubleValue() < estimatedCostOfBuy.doubleValue()) //asume we might need to pay the 0.3% fee (only in some situations
             {
-                String logInfo = "insufficient funds to buy, not proceeding " + usdAcct.getAvailable().doubleValue() + " < " + estimatedCostOfBuy.doubleValue();
+                String logInfo = "insufficient funds to buy, not proceeding " + fiatAcct.getAvailable().doubleValue() + " < " + estimatedCostOfBuy.doubleValue();
                 CryptomoneyAutotask.logMultiplexer.LogMessage(logInfo);
                 return;
             }
@@ -196,32 +192,32 @@ public class RuleAction_BuyCoinDCAPostOnly extends Rule
             //DEFINITELY PROCEEDING WITH BUY
             
             Order order = null;
-            if(this.account.btcBuyFrequencyDesperation < this.account.BTC_BUY_FREQUENCY_DESPERATION_THRESHOLD)
+            if(this.account.coinBuyFrequencyDesperation < this.account.COIN_BUY_FREQUENCY_DESPERATION_THRESHOLD)
             {
                 //EXECUTE BUY - POST (does not execute immediately
-                CryptomoneyAutotask.logProv.LogMessage("coin amount purchase triggered (post-only): " + CryptomoneyAutotask.btcFormat.format(coinAmountToPurchase) + "/" + this.minimumQuantityCoinThreshold);      
+                CryptomoneyAutotask.logProv.LogMessage("coin amount purchase triggered (post-only): " + CryptomoneyAutotask.coinFormat.format(coinAmountToPurchase) + "/" + this.minimumQuantityCoinThreshold);      
                 order = this.account.buyCoinPostOnly(coinAmountToPurchase, coinCurrencyType, fiatCurrencyType); //API call
             }
             else
             {
                 //DESPARATE BUY - BUY IMMEDIATELY (within reason)
-                CryptomoneyAutotask.logProv.LogMessage("coin amount purchase triggered (immediate): " + CryptomoneyAutotask.btcFormat.format(coinAmountToPurchase) + "/" + this.minimumQuantityCoinThreshold);      
+                CryptomoneyAutotask.logProv.LogMessage("coin amount purchase triggered (immediate): " + CryptomoneyAutotask.coinFormat.format(coinAmountToPurchase) + "/" + this.minimumQuantityCoinThreshold);      
                 order = this.account.buyCoinImmediate(coinAmountToPurchase, coinCurrencyType, fiatCurrencyType); //API call                
             }
             
             if(order != null)
             {
                 boolean postOnly = Boolean.parseBoolean(order.getPost_only());
-                String desperationInfo = " desp: " + this.account.btcBuyFrequencyDesperation + "/" + this.account.BTC_BUY_FREQUENCY_DESPERATION_THRESHOLD;
+                String desperationInfo = " desp: " + this.account.coinBuyFrequencyDesperation + "/" + this.account.COIN_BUY_FREQUENCY_DESPERATION_THRESHOLD;
                 String postOnlyInfo = "postType " + (postOnly ? "postonly" : "immediate");
-                String logString = "Placed order " + order.toString() + " " + desperationInfo + " " + postOnlyInfo + " estUsd: " + estimatedCostOfBuy.doubleValue();
+                String logString = "Placed order " + order.toString() + " " + desperationInfo + " " + postOnlyInfo + " estFiatCost: " + estimatedCostOfBuy.doubleValue() + " " + this.fiatCurrencyType.toString();
                 CryptomoneyAutotask.logMultiplexer.LogMessage(logString);
                 getAssociatedAllowance().addToAllowance(estimatedCostOfBuy.negate());
                 
                 //purge any extra allowance
                 if(getAssociatedAllowance().getAllowance().doubleValue() > 0)
                 {
-                    CryptomoneyAutotask.logMultiplexer.LogMessage("purging USD BTC BUY allowance " + getAssociatedAllowance().getAllowance());
+                    CryptomoneyAutotask.logMultiplexer.LogMessage("purging BUY allowance " + getAssociatedAllowance().getAllowance());
                     getAssociatedAllowance().resetAllowance();
                 }
             }
@@ -234,7 +230,7 @@ public class RuleAction_BuyCoinDCAPostOnly extends Rule
         }
         else
         {
-            CryptomoneyAutotask.logProv.LogMessage("coin amount to purchase less than threshold: " + CryptomoneyAutotask.btcFormat.format(coinAmountToPurchase) + "/" + this.minimumQuantityCoinThreshold);      
+            CryptomoneyAutotask.logProv.LogMessage("coin amount to purchase less than threshold: " + CryptomoneyAutotask.coinFormat.format(coinAmountToPurchase) + "/" + this.minimumQuantityCoinThreshold);      
         }
         
         
@@ -245,12 +241,13 @@ public class RuleAction_BuyCoinDCAPostOnly extends Rule
     public String getHelpString()
     {
         return this.getRuleType() + " " + this.getActionType() 
-            + " maximumAvgOccurrencesPerDay:" + maximumAvgOccurrencesPerDay
-            + " minimumQuantityBuyUSD:" + minimumQuantityBuyCurrency
-            + " minimumQuantityCoinThreshold:" + minimumQuantityCoinThreshold
-            + " maximumQuantityCoin:" + maximumQuantityCoin
+            + " coinCurrencyType:"+ this.coinCurrencyType
+            + " fiatCurrencyType:"+ this.fiatCurrencyType
+            + " execsPerDay:" + maximumAvgOccurrencesPerDay
+            + " minQtyFiat:" + minimumQuantityBuyCurrency
+            + " minQtyCoin:" + minimumQuantityCoinThreshold
+            + " maxQtyCoin:" + maximumQuantityCoin
             + " randomChanceToProceed:" + randomChanceToProceed
                 ;
-        
     }
 }

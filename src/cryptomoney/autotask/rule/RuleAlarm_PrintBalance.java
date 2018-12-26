@@ -85,12 +85,9 @@ public class RuleAlarm_PrintBalance extends Rule
         {
             executionCount-=numberOfExecutionsBeforeExecutingOnce;
             
-            for(int i=0;i<100 && executionCount > numberOfExecutionsBeforeExecutingOnce;i++)
+            if(executionCount > numberOfExecutionsBeforeExecutingOnce)
             {
-                if(executionCount > numberOfExecutionsBeforeExecutingOnce)
-                {
-                    executionCount-=numberOfExecutionsBeforeExecutingOnce; //don't let it run a bunch of times in a row
-                }
+                executionCount = (int)Math.round(executionCount % numberOfExecutionsBeforeExecutingOnce); //modulo - reduces it to a number less than numberOfExecutionsBeforeExecutingOnce to prevent it from running thrice (or more) in sequence in case the executionCount built up a lot.
             }
             
         }
@@ -126,6 +123,6 @@ public class RuleAlarm_PrintBalance extends Rule
     public String getHelpString()
     {
         return this.getRuleType() + " " + this.getActionType() 
-                + " maximumAvgOccurrencesPerDay:" + maximumAvgOccurrencesPerDay;
+                + " execsPerDay:" + maximumAvgOccurrencesPerDay;
     }
 }

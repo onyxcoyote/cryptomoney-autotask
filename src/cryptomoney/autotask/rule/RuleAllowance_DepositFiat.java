@@ -29,22 +29,22 @@ import java.math.BigDecimal;
 public class RuleAllowance_DepositFiat extends Rule
 {
     private FiatCurrencyType fiatCurrencyType;    
-    private double amountPerDayUSD;
+    private double amountPerDayFiat;
     
     public RuleAllowance_DepositFiat()
     {
-        super(RuleType.ALLOWANCE, ActionType.ALLOWANCE_DEPOSIT_USD);
+        super(RuleType.ALLOWANCE, ActionType.ALLOWANCE_DEPOSIT_FIAT);
     }
     
-    public RuleAllowance_DepositFiat(FiatCurrencyType _fiatCurrencyType, boolean _executeImmediately, double _amountPerDayUSD)
+    public RuleAllowance_DepositFiat(FiatCurrencyType _fiatCurrencyType, boolean _executeImmediately, double _amountPerDayFiat)
     {
-        super(RuleType.ALLOWANCE, ActionType.ALLOWANCE_DEPOSIT_USD);
+        super(RuleType.ALLOWANCE, ActionType.ALLOWANCE_DEPOSIT_FIAT);
         fiatCurrencyType = _fiatCurrencyType;
-        amountPerDayUSD = _amountPerDayUSD;
+        amountPerDayFiat = _amountPerDayFiat;
         
         if(_executeImmediately)
         {
-            getAssociatedAllowance().addToAllowance(BigDecimal.valueOf(amountPerDayUSD)); //A FULL DAY'S AMOUNT
+            getAssociatedAllowance().addToAllowance(BigDecimal.valueOf(amountPerDayFiat)); //A FULL DAY'S AMOUNT
         }
         
         CryptomoneyAutotask.logProv.LogMessage("CREATED actiontype: " + getActionType().toString() + " currentAmount: " + getAssociatedAllowance().getAllowance().doubleValue());
@@ -63,11 +63,11 @@ public class RuleAllowance_DepositFiat extends Rule
         int msPerDay = 1000*60*60*24;
         double intervalsPerDay =  msPerDay / CryptomoneyAutotask.iterationIntervalMS;
         
-        double amountPerIntervalUSD = amountPerDayUSD / intervalsPerDay;
+        double amountPerIntervalFiat = amountPerDayFiat / intervalsPerDay;
         
         
-        getAssociatedAllowance().addToAllowance(BigDecimal.valueOf(amountPerIntervalUSD));
-        CryptomoneyAutotask.logProv.LogMessage("STATUS actiontype: " + getActionType().toString() + "new AllowanceDepositUSD: " + getAssociatedAllowance().getAllowance());
+        getAssociatedAllowance().addToAllowance(BigDecimal.valueOf(amountPerIntervalFiat));
+        CryptomoneyAutotask.logProv.LogMessage("STATUS actiontype: " + getActionType().toString() + "new AllowanceDepositFiat: " + getAssociatedAllowance().getAllowance());
      
         //CryptomoneyAutotask.logProv.LogMessage("");
     }
@@ -76,6 +76,7 @@ public class RuleAllowance_DepositFiat extends Rule
     public String getHelpString()
     {
         return this.getRuleType() + " " + this.getActionType()                 
-                +  " amountPerDayUSD:" + amountPerDayUSD;
+            + " fiatCurrencyType:"+ this.fiatCurrencyType
+                +  " amountPerDayFiat:" + amountPerDayFiat;
     }
 }

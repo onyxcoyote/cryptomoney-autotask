@@ -31,23 +31,23 @@ public class RuleAllowance_WithdrawCoinToCoinbase extends Rule
 {
     private CoinCurrencyType coinCurrencyType;
     private FiatCurrencyType fiatCurrencyType;    
-    private double amountPerDayUSD;
+    private double amountPerDayFiat;
     
     public RuleAllowance_WithdrawCoinToCoinbase()
     {
-        super(RuleType.ALLOWANCE, ActionType.ALLOWANCE_WITHDRAW_BTC_TO_COINBASE);
+        super(RuleType.ALLOWANCE, ActionType.ALLOWANCE_WITHDRAW_COIN_TO_COINBASE);
     }
     
-    public RuleAllowance_WithdrawCoinToCoinbase(CoinCurrencyType _coinCurrencyType, FiatCurrencyType _fiatCurrencyType, boolean _executeImmediately, double _amountPerDayUSD)
+    public RuleAllowance_WithdrawCoinToCoinbase(CoinCurrencyType _coinCurrencyType, FiatCurrencyType _fiatCurrencyType, boolean _executeImmediately, double _amountPerDayFiat)
     {
-        super(RuleType.ALLOWANCE, ActionType.ALLOWANCE_WITHDRAW_BTC_TO_COINBASE);
+        super(RuleType.ALLOWANCE, ActionType.ALLOWANCE_WITHDRAW_COIN_TO_COINBASE);
         coinCurrencyType = _coinCurrencyType;
         fiatCurrencyType = _fiatCurrencyType;        
-        amountPerDayUSD = _amountPerDayUSD;
+        amountPerDayFiat = _amountPerDayFiat;
         
         if(_executeImmediately)
         {
-            getAssociatedAllowance().addToAllowance(BigDecimal.valueOf(amountPerDayUSD)); //A FULL DAY'S AMOUNT
+            getAssociatedAllowance().addToAllowance(BigDecimal.valueOf(amountPerDayFiat)); //A FULL DAY'S AMOUNT
         }
         
         CryptomoneyAutotask.logProv.LogMessage("CREATED actiontype: " + getActionType().toString() + " currentAmount: " + getAssociatedAllowance().getAllowance().doubleValue());
@@ -66,11 +66,11 @@ public class RuleAllowance_WithdrawCoinToCoinbase extends Rule
         int msPerDay = 1000*60*60*24;
         double intervalsPerDay =  msPerDay / CryptomoneyAutotask.iterationIntervalMS;
         
-        double amountPerIntervalUSD = amountPerDayUSD / intervalsPerDay;
+        double amountPerIntervalFiat = amountPerDayFiat / intervalsPerDay;
         //CryptomoneyAutotask.logProv.LogMessage("actiontype: " + getActionType().toString() + " amount/interval: " + amountPerIntervalUSD);      
         
-        getAssociatedAllowance().addToAllowance(BigDecimal.valueOf(amountPerIntervalUSD));
-        CryptomoneyAutotask.logProv.LogMessage("STATUS actiontype: " + getActionType().toString() + " new allowanceWithdrawBTCToCoinbaseInUSD: " + getAssociatedAllowance().getAllowance());      
+        getAssociatedAllowance().addToAllowance(BigDecimal.valueOf(amountPerIntervalFiat));
+        CryptomoneyAutotask.logProv.LogMessage("STATUS actiontype: " + getActionType().toString() + " new allowanceWithdrawCoinToCoinbaseInFiat: " + getAssociatedAllowance().getAllowance());      
      
         //CryptomoneyAutotask.logProv.LogMessage("");
     }
@@ -79,6 +79,8 @@ public class RuleAllowance_WithdrawCoinToCoinbase extends Rule
     public String getHelpString()
     {
         return this.getRuleType() + " " + this.getActionType()                 
-                +  " amountPerDayUSD:" + amountPerDayUSD;
+            + " coinCurrencyType:"+ this.coinCurrencyType
+            + " fiatCurrencyType:"+ this.fiatCurrencyType  
+                +  " amountPerDayFiat:" + amountPerDayFiat;
     }
 }

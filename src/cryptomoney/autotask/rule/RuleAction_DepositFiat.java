@@ -36,8 +36,8 @@ public class RuleAction_DepositFiat extends Rule
 {
     private FiatCurrencyType fiatCurrencyType;
     private double maximumAvgOccurrencesPerDay;
-    private double minimumUSDQuantityThreshold;
-    private double maximumUSDQuantity;
+    private double minimumFiatQuantityThreshold;
+    private double maximumFiatQuantity;
     
     private int executionCount = 0; //if we set this to 999999 then it would execute right away upon running program (maybe)
     
@@ -46,13 +46,13 @@ public class RuleAction_DepositFiat extends Rule
         super(RuleType.ACTION, ActionType.ACTION_DEPOSIT_FIAT);
     }
     
-    public RuleAction_DepositFiat(FiatCurrencyType _fiatCurrencyType, boolean _executeImmediately, double _maximumAvgOccurrencesPerDay, double _minimumUSDQuantityThreshold, double _maximumUSDQuantity)
+    public RuleAction_DepositFiat(FiatCurrencyType _fiatCurrencyType, boolean _executeImmediately, double _maximumAvgOccurrencesPerDay, double _minimumFiatQuantityThreshold, double _maximumFiatQuantity)
     {
         super(RuleType.ACTION, ActionType.ACTION_DEPOSIT_FIAT);
         fiatCurrencyType = _fiatCurrencyType;
         maximumAvgOccurrencesPerDay = _maximumAvgOccurrencesPerDay;
-        minimumUSDQuantityThreshold = _minimumUSDQuantityThreshold;
-        maximumUSDQuantity = _maximumUSDQuantity;
+        minimumFiatQuantityThreshold = _minimumFiatQuantityThreshold;
+        maximumFiatQuantity = _maximumFiatQuantity;
         
         if(_executeImmediately)
         {
@@ -81,9 +81,9 @@ public class RuleAction_DepositFiat extends Rule
         
 
         
-        if(getAssociatedAllowance().getAllowance().doubleValue() < minimumUSDQuantityThreshold)
+        if(getAssociatedAllowance().getAllowance().doubleValue() < minimumFiatQuantityThreshold)
         {
-            CryptomoneyAutotask.logProv.LogMessage(getHelpString() + " account.getAllowanceDepositUSD() does not exceed minimumUSDQuantityThreshold " + getAssociatedAllowance().getAllowance() + "/" + minimumUSDQuantityThreshold);
+            CryptomoneyAutotask.logProv.LogMessage(getHelpString() + " account.getAllowanceDepositUSD() does not exceed minimumFiatQuantityThreshold " + getAssociatedAllowance().getAllowance().setScale(3, RoundingMode.HALF_EVEN) + "/" + minimumFiatQuantityThreshold);
             return;
         }
 
@@ -100,21 +100,18 @@ public class RuleAction_DepositFiat extends Rule
         {
             executionCount-=numberOfExecutionsBeforeExecutingOnce;
             
-            for(int i=0;i<100 && executionCount > numberOfExecutionsBeforeExecutingOnce;i++)
+            if(executionCount > numberOfExecutionsBeforeExecutingOnce)
             {
-                if(executionCount > numberOfExecutionsBeforeExecutingOnce)
-                {
-                    executionCount-=numberOfExecutionsBeforeExecutingOnce; //don't let it run a bunch of times in a row
-                }
+                executionCount = (int)Math.round(executionCount % numberOfExecutionsBeforeExecutingOnce); //modulo - reduces it to a number less than numberOfExecutionsBeforeExecutingOnce to prevent it from running thrice (or more) in sequence in case the executionCount built up a lot.
             }
         }
         
         
         
         BigDecimal amountToDeposit = getAssociatedAllowance().getAllowance();
-        if(amountToDeposit.doubleValue() > maximumUSDQuantity)
+        if(amountToDeposit.doubleValue() > maximumFiatQuantity)
         {
-           BigDecimal amountAboveMax = amountToDeposit.subtract(BigDecimal.valueOf(maximumUSDQuantity));
+           BigDecimal amountAboveMax = amountToDeposit.subtract(BigDecimal.valueOf(maximumFiatQuantity));
            amountToDeposit = amountToDeposit.subtract(amountAboveMax);
         }
 
@@ -149,9 +146,10 @@ public class RuleAction_DepositFiat extends Rule
     public String getHelpString()
     {
         return this.getRuleType() + " " + this.getActionType() 
-            + " maximumAvgOccurrencesPerDay:" + maximumAvgOccurrencesPerDay
-            + " minimumUSDQuantityThreshold:" + minimumUSDQuantityThreshold
-            + " maximumUSDQuantity:" + maximumUSDQuantity
+            + " fiatCurrencyType:"+ this.fiatCurrencyType                
+            + " execsPerDay:" + maximumAvgOccurrencesPerDay
+            + " minFiatQty:" + minimumFiatQuantityThreshold
+            + " maxFiatQty:" + maximumFiatQuantity
                 ;
     }
 }

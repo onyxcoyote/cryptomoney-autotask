@@ -81,7 +81,7 @@ public class Autotask
         fiatSafetyLimits.addLimit(new FiatSafetyLimit(FiatCurrencyType.USD, 200)); //limit for sanity check
         coinSafetyLimits.addLimit(new CoinSafetyLimit(CoinCurrencyType.BTC, 0.1)); //limit for sanity check
         
-        account1 = new ExchangeAccount(); //todo: change this to "BTC"  In case we have other types of accounts running the same API key (like ETH or LTC)
+        account1 = new ExchangeAccount(); //todo: change this to "BTC"?  In case we have other types of accounts running the same API key (like ETH or LTC)
         executeImmediately = _executeImmediately;
         
         
@@ -125,12 +125,6 @@ public class Autotask
         //todo: https://docs.pro.coinbase.com/#get-products min BTC purchase size can change in the future
     }
     
-    /*private void CancelOpenOrders()
-    {
-        account1.ProcessBTCBuyOrders(true);
-    }*/
-    
-        
     private void LoadRuleHelp()
     {
         availableRules.add(new RuleAction_BuyCoinDCAPostOnly());
@@ -161,10 +155,6 @@ public class Autotask
         //todo: use BigDecimal instead of double for calculations
         
         
-        //boolean ALLOWANCE_BUY_BTC__enable                   =   Boolean.parseBoolean(CryptomoneyAutotask.config.getConfigString("ALLOWANCE_BUY_BTC__enable"));
-        //boolean ALLOWANCE_WITHDRAW_BTC_TO_COINBASE__enable  =   Boolean.parseBoolean(CryptomoneyAutotask.config.getConfigString("ALLOWANCE_WITHDRAW_BTC_TO_COINBASE__enable"));
-        //boolean ALLOWANCE_DEPOSIT_USD__enable               =   Boolean.parseBoolean(CryptomoneyAutotask.config.getConfigString("ALLOWANCE_DEPOSIT_USD__enable"));
-        //boolean ACTION_PROCESS_BTC_BUY_POST_ORDERS__enable  =   Boolean.parseBoolean(CryptomoneyAutotask.config.getConfigString("ACTION_PROCESS_BTC_BUY_POST_ORDERS__enable"));
         boolean ACTION_BUY_COIN_DCA_POSTONLY__enable         =   Boolean.parseBoolean(CryptomoneyAutotask.config.getConfigString("ACTION_BUY_COIN_DCA_POSTONLY__enable"));
         boolean ACTION_WITHDRAW_COIN_TO_COINBASE__enable     =   Boolean.parseBoolean(CryptomoneyAutotask.config.getConfigString("ACTION_WITHDRAW_COIN_TO_COINBASE__enable"));
         boolean ACTION_DEPOSIT_FIAT__enable                  =   Boolean.parseBoolean(CryptomoneyAutotask.config.getConfigString("ACTION_DEPOSIT_FIAT__enable"));
@@ -208,12 +198,12 @@ public class Autotask
             {
                 throw new Exception("ACTION_BUY_COIN_DCA_POSTONLY__amountPerDayUS exceeds hard-coded safe maximum");
             }
-            RuleAllowance_BuyCoin allowance_buyBTC = new RuleAllowance_BuyCoin(
+            RuleAllowance_BuyCoin allowance_buyCoin = new RuleAllowance_BuyCoin(
                     coinCurrencyType, 
                     fiatCurrencyType, 
                     executeImmediately, 
                     ACTION_BUY_COIN_DCA_POSTONLY__amountPerDayCurrencyQuantity); 
-            rules.add(allowance_buyBTC);
+            rules.add(allowance_buyCoin);
             
             //PROCESS ORDERS RULE
             double ACTION_BUY_COIN_DCA_POSTONLY__PROCESS_COIN_BUY_POST_ORDERS__maximumAvgOccurrencesPerDay = Double.parseDouble(CryptomoneyAutotask.config.getConfigString("ACTION_BUY_COIN_DCA_POSTONLY__PROCESS_COIN_BUY_POST_ORDERS__maximumAvgOccurrencesPerDay"));
@@ -284,12 +274,12 @@ public class Autotask
             {
                 throw new Exception("ACTION_WITHDRAW_COIN_TO_COINBASE__amountPerDayCurrencyQuantity exceeds hard-coded safe maximum");
             }
-            RuleAllowance_WithdrawCoinToCoinbase allowanceBTCtoCoinbase = new RuleAllowance_WithdrawCoinToCoinbase(
+            RuleAllowance_WithdrawCoinToCoinbase allowanceWithdrawCointoCoinbase = new RuleAllowance_WithdrawCoinToCoinbase(
                     coinCurrencyType,
                     fiatCurrencyType, 
                     executeImmediately, 
                     ACTION_WITHDRAW_COIN_TO_COINBASE__amountPerDayCurrencyQuantity);
-            rules.add(allowanceBTCtoCoinbase);
+            rules.add(allowanceWithdrawCointoCoinbase);
             
             
             //ACTION - WITHDRAW RULE
@@ -333,11 +323,11 @@ public class Autotask
             {
                 throw new Exception("ACTION_DEPOSIT_FIAT__amountPerDayCurrencyQuantity exceeds hard-coded safe maximum");
             }
-            RuleAllowance_DepositFiat allowanceDepositUSD = new RuleAllowance_DepositFiat(
+            RuleAllowance_DepositFiat allowanceDepositFiat = new RuleAllowance_DepositFiat(
                     fiatCurrencyType,
                     executeImmediately, 
                     ACTION_DEPOSIT_FIAT__amountPerDayCurrencyQuantity);
-            rules.add(allowanceDepositUSD);
+            rules.add(allowanceDepositFiat);
             
             
             //ACTION - DEPOSIT RULE
@@ -419,11 +409,12 @@ public class Autotask
     
     private void ExecuteRules()
     {
+        CryptomoneyAutotask.logProv.LogMessage("-----");
         for(Rule r : rules)
         {
             if(r.getRuleType() == RuleType.ALLOWANCE)
             {
-                r.doAction();
+                wrapAction(r);               
             }
         }
         
@@ -431,7 +422,7 @@ public class Autotask
         {
             if(r.getRuleType() == RuleType.ALARM)
             {
-                r.doAction();
+                wrapAction(r);
             }
         }
         
@@ -440,9 +431,31 @@ public class Autotask
         {
             if(r.getRuleType() == RuleType.ACTION)
             {
-                r.doAction();
+                wrapAction(r);
             }
         }
+    }
+    
+    private void wrapAction(Rule rule)
+    {
+        try
+        {
+            rule.doAction();
+        }
+        catch(Exception ex)
+        {
+            if(ex.getMessage().contains("I/O error on GET request")) //coinbase error
+            {
+                CryptomoneyAutotask.logMultiplexer.LogException(ex);
+                lsoc.library.utilities.Sleep.Sleep(1000*60*2); //sleep 5 minutes after an error, let the rule not complete and move on
+            }
+            else
+            {
+                //an unexpected error, for now exit.  If this happens, handle it better depending on the type of error and desired result.
+                CryptomoneyAutotask.logMultiplexer.LogException(ex);
+                System.exit(1); 
+            }
+        }      
     }
     
     

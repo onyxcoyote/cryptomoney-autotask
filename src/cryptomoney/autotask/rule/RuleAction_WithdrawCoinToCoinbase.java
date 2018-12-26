@@ -41,7 +41,7 @@ public class RuleAction_WithdrawCoinToCoinbase extends Rule
     private CoinCurrencyType coinCurrencyType;
     private FiatCurrencyType fiatCurrencyType;
     private double maximumAvgOccurrencesPerDay;
-    private double minimumCurrencyQuantityThreshold;
+    private double minimumFiatQuantityThreshold;
     private double maximumCurrencyQuantity;
     
     private int executionCount = 0; //if we set this to 999999 then it would execute right away upon running program (maybe)
@@ -57,7 +57,7 @@ public class RuleAction_WithdrawCoinToCoinbase extends Rule
         coinCurrencyType = _coinCurrencyType;
         fiatCurrencyType = _fiatCurrencyType;
         maximumAvgOccurrencesPerDay = _maximumAvgOccurrencesPerDay;
-        minimumCurrencyQuantityThreshold = _minimumCurrencyQuantityThreshold;
+        minimumFiatQuantityThreshold = _minimumCurrencyQuantityThreshold;
         maximumCurrencyQuantity = _maximumCurrencyQuantity;
         
         if(_executeImmediately)
@@ -88,9 +88,9 @@ public class RuleAction_WithdrawCoinToCoinbase extends Rule
 
         
         
-        if(getAssociatedAllowance().getAllowance().doubleValue() < minimumCurrencyQuantityThreshold)
+        if(getAssociatedAllowance().getAllowance().doubleValue() < minimumFiatQuantityThreshold)
         {
-            CryptomoneyAutotask.logProv.LogMessage(getHelpString() + " account.getAllowanceWithdrawBTCToCoinbaseInUSD() does not exceed minimumUSDQuantityThreshold " + getAssociatedAllowance().getAllowance() + "/" + minimumCurrencyQuantityThreshold);
+            CryptomoneyAutotask.logProv.LogMessage(getHelpString() + " account.getAllowanceWithdrawCoinToCoinbaseInFiat() does not exceed minimumFiatQuantityThreshold " + getAssociatedAllowance().getAllowance().setScale(3, RoundingMode.HALF_EVEN) + "/" + minimumFiatQuantityThreshold);
             return;
         }
         
@@ -106,12 +106,9 @@ public class RuleAction_WithdrawCoinToCoinbase extends Rule
         {
             executionCount-=numberOfExecutionsBeforeExecutingOnce;
             
-            for(int i=0;i<100 && executionCount > numberOfExecutionsBeforeExecutingOnce;i++)
+            if(executionCount > numberOfExecutionsBeforeExecutingOnce)
             {
-                if(executionCount > numberOfExecutionsBeforeExecutingOnce)
-                {
-                    executionCount-=numberOfExecutionsBeforeExecutingOnce; //don't let it run a bunch of times in a row
-                }
+                executionCount = (int)Math.round(executionCount % numberOfExecutionsBeforeExecutingOnce); //modulo - reduces it to a number less than numberOfExecutionsBeforeExecutingOnce to prevent it from running thrice (or more) in sequence in case the executionCount built up a lot.
             }
         }
         
@@ -123,7 +120,7 @@ public class RuleAction_WithdrawCoinToCoinbase extends Rule
         
         if(btcAccount == null)
         {
-            CryptomoneyAutotask.logMultiplexer.LogMessage("ERROR, NO BTC ACCOUNT FOUND");
+            CryptomoneyAutotask.logMultiplexer.LogMessage("ERROR, NO COIN ACCOUNT FOUND");
             System.exit(1);
         }
         
@@ -140,7 +137,7 @@ public class RuleAction_WithdrawCoinToCoinbase extends Rule
         if(valCoinAvail > 0)
         {
             
-            if(fiatBalanceValueOfCoinInCoinbasePRO >= minimumCurrencyQuantityThreshold)
+            if(fiatBalanceValueOfCoinInCoinbasePRO >= minimumFiatQuantityThreshold)
             {
 
                 CryptomoneyAutotask.logProv.LogMessage("actiontype: " + getActionType().toString());
@@ -161,7 +158,7 @@ public class RuleAction_WithdrawCoinToCoinbase extends Rule
                     coinQuantityToWithdraw = new BigDecimal(maxCoinWithdrawQuantity).setScale(8, RoundingMode.FLOOR);
                 }
 
-                CryptomoneyAutotask.logMultiplexer.LogMessage("DEBUG: searching coinbase accounts for "+this.coinCurrencyType.toString());
+                //CryptomoneyAutotask.logMultiplexer.LogMessage("DEBUG: searching coinbase accounts for "+this.coinCurrencyType.toString());
                 String coinCoinbaseAccount_Id = this.account.getCoinbaseRegularAccount_Id(WalletAccountCurrency.valueOf(this.coinCurrencyType.toString()));
 
                 if(coinCoinbaseAccount_Id == null) 
@@ -205,9 +202,11 @@ public class RuleAction_WithdrawCoinToCoinbase extends Rule
     public String getHelpString()
     {
         return this.getRuleType() + " " + this.getActionType() 
-            + " maximumAvgOccurrencesPerDay:" + maximumAvgOccurrencesPerDay
-            + " minimumCurrencyQuantityThreshold:" + minimumCurrencyQuantityThreshold
-            + " maximumCurrencyQuantity:" + maximumCurrencyQuantity
+            + " coinCurrencyType:"+ this.coinCurrencyType
+            + " fiatCurrencyType:"+ this.fiatCurrencyType                
+            + " execsPerDay:" + maximumAvgOccurrencesPerDay
+            + " minFiat:" + minimumFiatQuantityThreshold
+            + " maxFiat:" + maximumCurrencyQuantity
                 ;
     }
 }

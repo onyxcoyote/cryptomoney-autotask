@@ -70,10 +70,11 @@ public class CryptomoneyAutotask
     private static ILoggingProvider logProvFile;
     public static ILoggingProvider logMultiplexer;
     public static int iterationIntervalMS = 1000*5;
-    public static DecimalFormat btcFormat = new DecimalFormat("#0.00000000");
-    public static DecimalFormat usdFormat = new DecimalFormat("#0.00");
+    public static DecimalFormat coinFormat = new DecimalFormat("#0.00000000");
+    public static DecimalFormat fiatFormat = new DecimalFormat("#0.00");
+    //public static DecimalFormat genericFractionFormat = new DecimalFormat("#0.000");
     
-    public static double BTC_USD_PRICE_MIN_REALISTIC = 1000;
+    public static double BTC_USD_PRICE_MIN_REALISTIC = 1000; //TODO: refactor
     public static double BTC_USD_PRICE_MAX_REALISTIC = 15000; //todo: may need to change this in the future
     
     public static FileConfig config;
@@ -86,7 +87,7 @@ public class CryptomoneyAutotask
     { 
         try
         {
-            String version = "0.14";
+            String version = "0.15";
 
             try
             {
@@ -115,14 +116,7 @@ public class CryptomoneyAutotask
             String apiPassphrase = config.getConfigString("api_passphrase");
             String apiBaseURL = config.getConfigString("api_base_url");
             String executeImmediately = config.getConfigString("execute_immediately");
-            boolean bExecuteImmediately = Boolean.parseBoolean(executeImmediately); //allow "True"
-            if(!bExecuteImmediately)
-            {
-                if(executeImmediately.equals("1")) //also allow "1".  Anything else translates to false
-                {
-                    bExecuteImmediately = true;
-                }
-            }
+            boolean bExecuteImmediately = Boolean.parseBoolean(executeImmediately); //allow "true"
             
             logProv.LogMessage("config setting executeImmediately: " + bExecuteImmediately);
 

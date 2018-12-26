@@ -65,33 +65,13 @@ public class ExchangeAccount
     
     private HashMap<String, Order> orders = new HashMap<>();
     
-    public int btcBuyFrequencyDesperation = 0; //todo: can this be refactored, maybe make it an object
-    public static final int BTC_BUY_FREQUENCY_DESPERATION_THRESHOLD = 10;
+    public int coinBuyFrequencyDesperation = 0; //todo: can this be refactored, maybe make it an object
+    public static final int COIN_BUY_FREQUENCY_DESPERATION_THRESHOLD = 10; //todo: put this in the rule
     
-    //private String coinbaseProUSDAccountId = null;
-    //private String coinbaseProUSDBankPaymentTypeId = null;
-    //private String coinbaseProBTCAccountId = null;
-    //private String coinbaseRegularBTCAccountId = null;
-    
-    //private boolean has_coinbaseProUSDAccountId = false;
-    //private boolean has_coinbaseProUSDBankPaymentTypeId = false;
-    //private boolean has_coinbaseProBTCAccountId = false;
-    //private boolean has_coinbaseRegularBTCAccountId = false;
-    
-    //private CoinCurrencyType coinCurrencyType;
-    //private FiatCurrencyType fiatCurrencyType;
        
     public ExchangeAccount()
     {
         
-        /*Allowance allowanceBuyBTCinUSD = new Allowance(); //TODO: choose currency type
-        Allowance allowanceWithdrawBTCToCoinbaseInUSD = new Allowance(); //TODO: choose currency type
-        AllowanceFiat allowanceDepositUSD = new AllowanceFiat();
-        
-        allowances.add(allowanceBuyBTCinUSD);
-        allowances.add(allowanceWithdrawBTCToCoinbaseInUSD);
-        allowancesFiat.add(allowanceDepositUSD);
-        remove these*/
         
     }
     
@@ -187,7 +167,7 @@ public class ExchangeAccount
             return lookingForCoinbaseAccount;
         }
         
-        CryptomoneyAutotask.logMultiplexer.LogMessage("Impossible situation getCoinbaseRegularBTCAccountById. Exiting!");
+        CryptomoneyAutotask.logMultiplexer.LogMessage("Impossible situation getCoinbaseRegularAccount_ById. Exiting!");
         System.exit(1);
         return null; 
     }
@@ -252,7 +232,7 @@ public class ExchangeAccount
             }
         }
         
-        CryptomoneyAutotask.logMultiplexer.LogMessage("Impossible situation getCoinbaseRegularBTCAccount_Id. Exiting!");
+        CryptomoneyAutotask.logMultiplexer.LogMessage("Impossible situation getCoinbaseRegularAccount_Id. Exiting!");
         System.exit(1);
         return null;        
     }
@@ -474,8 +454,8 @@ public class ExchangeAccount
                         //orders.remove(orderToCancel.getId()); //wait until later to verify it's been cancelled ? Or mark it as something we're cancelling?
                         ordersNotOpen.add(orderToCancel); //assume the cancel was complete
 
-                        this.btcBuyFrequencyDesperation++;
-                        CryptomoneyAutotask.logProv.LogMessage("desperation set to: " + this.btcBuyFrequencyDesperation + "/" + this.BTC_BUY_FREQUENCY_DESPERATION_THRESHOLD);      
+                        this.coinBuyFrequencyDesperation++;
+                        CryptomoneyAutotask.logProv.LogMessage("desperation set to: " + this.coinBuyFrequencyDesperation + "/" + this.COIN_BUY_FREQUENCY_DESPERATION_THRESHOLD);      
                     }
                 }
             }
@@ -516,7 +496,7 @@ public class ExchangeAccount
                             String logString = "fill found: " + fill.getOrder_id() + " " + fill.getSize() + " " + fill.getLiquidity() + " " + fill.getProduct_id() + " " + fill.getSide() + " " + fill.getSettled();
                             CryptomoneyAutotask.logMultiplexer.LogMessage(logString); 
                             orderFound = true;
-                            btcBuyFrequencyDesperation=0; //stub
+                            coinBuyFrequencyDesperation=0; //stub
                         }
                     }
 
@@ -553,7 +533,7 @@ public class ExchangeAccount
 
                             this.orders.remove(missingOrder.getId()); //remove order
                             CryptomoneyAutotask.logMultiplexer.LogMessage("ORDER DONE: " + missingOrder.getId() + " " + missingOrder.toString() + " filled: " + fill.getSize().doubleValue()+ "/" + missingOrder.getSize());
-                            btcBuyFrequencyDesperation=0; //TODO: specify
+                            coinBuyFrequencyDesperation=0; //TODO: specify
                         }
                     }
                 }

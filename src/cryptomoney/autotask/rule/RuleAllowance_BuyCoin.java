@@ -31,23 +31,23 @@ public class RuleAllowance_BuyCoin extends Rule
 {
     private CoinCurrencyType coinCurrencyType;
     private FiatCurrencyType fiatCurrencyType;    
-    private double amountPerDayUSD;
+    private double amountPerDayFiat;
     
     public RuleAllowance_BuyCoin()
     {
-        super(RuleType.ALLOWANCE, ActionType.ALLOWANCE_BUY_BTC);
+        super(RuleType.ALLOWANCE, ActionType.ALLOWANCE_BUY_COIN);
     }
     
-    public RuleAllowance_BuyCoin(CoinCurrencyType _coinCurrencyType, FiatCurrencyType _fiatCurrencyType, boolean _executeImmediately, double _amountPerDayUSD)
+    public RuleAllowance_BuyCoin(CoinCurrencyType _coinCurrencyType, FiatCurrencyType _fiatCurrencyType, boolean _executeImmediately, double _amountPerDayFiat)
     {
-        super(RuleType.ALLOWANCE, ActionType.ALLOWANCE_BUY_BTC);
+        super(RuleType.ALLOWANCE, ActionType.ALLOWANCE_BUY_COIN);
         coinCurrencyType = _coinCurrencyType;
         fiatCurrencyType = _fiatCurrencyType;
-        amountPerDayUSD = _amountPerDayUSD;
+        amountPerDayFiat = _amountPerDayFiat;
         
         if(_executeImmediately)
         {
-            getAssociatedAllowance().addToAllowance(BigDecimal.valueOf(amountPerDayUSD)); //A FULL DAY'S AMOUNT
+            getAssociatedAllowance().addToAllowance(BigDecimal.valueOf(amountPerDayFiat)); //A FULL DAY'S AMOUNT
         }
         
         CryptomoneyAutotask.logProv.LogMessage("CREATED actiontype: " + getActionType().toString() + " current amount: " + getAssociatedAllowance().getAllowance().doubleValue());      
@@ -66,10 +66,10 @@ public class RuleAllowance_BuyCoin extends Rule
         int msPerDay = 1000*60*60*24;
         double intervalsPerDay =  msPerDay / CryptomoneyAutotask.iterationIntervalMS;
         
-        double amountPerIntervalUSD = amountPerDayUSD / intervalsPerDay;
+        double amountPerIntervalFiat = amountPerDayFiat / intervalsPerDay;
         
-        getAssociatedAllowance().addToAllowance(BigDecimal.valueOf(amountPerIntervalUSD));
-        CryptomoneyAutotask.logProv.LogMessage("STATUS actiontype: " + getActionType().toString() + " new allowanceBuyBTCinUSD: " + getAssociatedAllowance().getAllowance());     
+        getAssociatedAllowance().addToAllowance(BigDecimal.valueOf(amountPerIntervalFiat));
+        CryptomoneyAutotask.logProv.LogMessage("STATUS actiontype: " + getActionType().toString() + " new allowanceBuyCoinInFiat: " + getAssociatedAllowance().getAllowance());     
         
         //CryptomoneyAutotask.logProv.LogMessage("");
     }
@@ -78,6 +78,8 @@ public class RuleAllowance_BuyCoin extends Rule
     public String getHelpString()
     {
         return this.getRuleType() + " " + this.getActionType() 
-                +  " amountPerDayUSD:" + amountPerDayUSD;
+            + " coinCurrencyType:"+ this.coinCurrencyType
+            + " fiatCurrencyType:"+ this.fiatCurrencyType                  
+                +  " amountPerDayFiat:" + amountPerDayFiat;
     }
 }

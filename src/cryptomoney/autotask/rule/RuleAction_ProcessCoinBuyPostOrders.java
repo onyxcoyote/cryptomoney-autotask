@@ -40,7 +40,7 @@ public class RuleAction_ProcessCoinBuyPostOrders extends Rule
     
     public RuleAction_ProcessCoinBuyPostOrders()
     {
-        super(RuleType.ACTION, ActionType.ACTION_PROCESS_BTC_BUY_POST_ORDERS);
+        super(RuleType.ACTION, ActionType.ACTION_PROCESS_COIN_BUY_POST_ORDERS);
     }
     
     /**
@@ -49,7 +49,7 @@ public class RuleAction_ProcessCoinBuyPostOrders extends Rule
      */
     public RuleAction_ProcessCoinBuyPostOrders(CoinCurrencyType _coinCurrencyType, FiatCurrencyType _fiatCurrencyType, boolean _executeImmediately, double _maximumAvgOccurrencesPerDay)
     {
-        super(RuleType.ACTION, ActionType.ACTION_PROCESS_BTC_BUY_POST_ORDERS);
+        super(RuleType.ACTION, ActionType.ACTION_PROCESS_COIN_BUY_POST_ORDERS);
         coinCurrencyType = _coinCurrencyType;
         fiatCurrencyType = _fiatCurrencyType;
         maximumAvgOccurrencesPerDay = _maximumAvgOccurrencesPerDay;
@@ -93,12 +93,9 @@ public class RuleAction_ProcessCoinBuyPostOrders extends Rule
         {
             executionCount-=numberOfExecutionsBeforeExecutingOnce;
             
-            for(int i=0;i<100 && executionCount > numberOfExecutionsBeforeExecutingOnce;i++)
+            if(executionCount > numberOfExecutionsBeforeExecutingOnce)
             {
-                if(executionCount > numberOfExecutionsBeforeExecutingOnce)
-                {
-                    executionCount-=numberOfExecutionsBeforeExecutingOnce; //don't let it run a bunch of times in a row
-                }
+                executionCount = (int)Math.round(executionCount % numberOfExecutionsBeforeExecutingOnce); //modulo - reduces it to a number less than numberOfExecutionsBeforeExecutingOnce to prevent it from running thrice (or more) in sequence in case the executionCount built up a lot.
             }
             
         }
@@ -112,6 +109,8 @@ public class RuleAction_ProcessCoinBuyPostOrders extends Rule
     public String getHelpString()
     {
         return this.getRuleType() + " " + this.getActionType() 
-                + " maximumAvgOccurrencesPerDay:" + maximumAvgOccurrencesPerDay;
+            + " coinCurrencyType:"+ this.coinCurrencyType
+            + " fiatCurrencyType:"+ this.fiatCurrencyType                
+                + " execsPerDay:" + maximumAvgOccurrencesPerDay;
     }
 }
