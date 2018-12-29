@@ -1,5 +1,3 @@
-package cryptomoney.autotask.currency;
-
 /*
     This file is part of cryptomoney-autotask.
 
@@ -16,14 +14,24 @@ package cryptomoney.autotask.currency;
     You should have received a copy of the GNU General Public License
     along with cryptomoney-autotask.  If not, see <https://www.gnu.org/licenses/>.
  */
+package cryptomoney.autotask.currency;
 
 /**
  *
  * @author onyxcoyote <no-reply@onyxcoyote.com>
  */
-public enum FiatCurrencyType
+public class CoinPriceLimit
 {
-    USD,
-    EUR,
-    GBP
+    public CoinCurrencyType coinCurrencyType;
+    public FiatCurrencyType fiatCurrencyTypeForMeasure;
+    public double minValue;
+    public double maxValue;
+    
+    public CoinPriceLimit(CoinCurrencyType _coinCurrencyType, FiatCurrencyType _fiatCurrencyTypeForMeasure ,double _minValue, double _maxValue)
+    {
+        coinCurrencyType = _coinCurrencyType;
+        fiatCurrencyTypeForMeasure = _fiatCurrencyTypeForMeasure;
+        minValue = _minValue;
+        maxValue = _maxValue;
+    }
 }

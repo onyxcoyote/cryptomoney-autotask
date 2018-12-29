@@ -358,6 +358,7 @@ public class ExchangeAccount
      */
     public boolean ProcessBuyOrders(CoinCurrencyType _coinCurrencyType, FiatCurrencyType _fiatCurrencyType, boolean cancelAnyOpen) //TODO: change this to only look at buy orders
     {
+        CryptomoneyAutotask.logProv.LogMessage("ProcessBuyOrders cancelOpen? " + cancelAnyOpen);
         boolean madeChanges = false;
         
         if(this.exchangeType == ExchangeType.CoinbasePro)
@@ -392,10 +393,14 @@ public class ExchangeAccount
                     orphanedOrders.add(openOrder);
                     if(cancelAnyOpen)
                     {
-                        if(openOrder.getProduct_id().equals(_coinCurrencyType.toString())) //only cancel/check orders of the specified coin type
+                        if(openOrder.getProduct_id().equals(_coinCurrencyType.toString()+"-"+_fiatCurrencyType.toString())) //only cancel/check orders of the specified type, e.g. BTC-USD
                         {
                             CryptomoneyAutotask.logProv.LogMessage("Adding orphan order to cancellation queue: " + openOrder.getId());
                             ordersToCancel.add(openOrder);
+                        }
+                        else
+                        {
+                            //CryptomoneyAutotask.logProv.LogMessage("DEBUG: not cancelling: " + openOrder.getId() + " = " + openOrder.getType() + " " + openOrder.getProduct_id());
                         }
                     }
                 }
@@ -448,7 +453,7 @@ public class ExchangeAccount
                     {
                         lsoc.library.utilities.Sleep.Sleep(100); //slow down so we're not querying too fast. this limits it to 10x/second
 
-                        CryptomoneyAutotask.logProv.LogMessage("submitting cancel for " + orderToCancel.getId());
+                        CryptomoneyAutotask.logProv.LogMessage("submitting cancel for " + orderToCancel.getId() + " " + orderToCancel.toString());
                         String response = CryptomoneyAutotask.app.orderService().cancelOrder(orderToCancel.getId()); //API CALL
                         CryptomoneyAutotask.logMultiplexer.LogMessage("Requested order cancel, response: " + response);
                         //orders.remove(orderToCancel.getId()); //wait until later to verify it's been cancelled ? Or mark it as something we're cancelling?

@@ -22,6 +22,7 @@ import cryptomoney.autotask.allowance.AllowanceType;
 import cryptomoney.autotask.currency.CoinCurrencyType;
 import cryptomoney.autotask.currency.FiatCurrencyType;
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 
 /**
  *
@@ -70,7 +71,7 @@ public class RuleAllowance_WithdrawCoinToCoinbase extends Rule
         //CryptomoneyAutotask.logProv.LogMessage("actiontype: " + getActionType().toString() + " amount/interval: " + amountPerIntervalUSD);      
         
         getAssociatedAllowance().addToAllowance(BigDecimal.valueOf(amountPerIntervalFiat));
-        CryptomoneyAutotask.logProv.LogMessage("STATUS actiontype: " + getActionType().toString() + " new allowanceWithdrawCoinToCoinbaseInFiat: " + getAssociatedAllowance().getAllowance());      
+        CryptomoneyAutotask.logProv.LogMessage("STATUS actiontype: " + getActionType().toString() + " new allowanceWithdrawCoinToCoinbaseInFiat: " + getAssociatedAllowance().getAllowance().setScale(2, RoundingMode.FLOOR));      
      
         //CryptomoneyAutotask.logProv.LogMessage("");
     }

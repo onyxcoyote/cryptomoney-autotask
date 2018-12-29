@@ -22,6 +22,7 @@ import cryptomoney.autotask.allowance.AllowanceType;
 import cryptomoney.autotask.currency.CoinCurrencyType;
 import cryptomoney.autotask.currency.FiatCurrencyType;
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 
 /**
  *
@@ -69,7 +70,7 @@ public class RuleAllowance_BuyCoin extends Rule
         double amountPerIntervalFiat = amountPerDayFiat / intervalsPerDay;
         
         getAssociatedAllowance().addToAllowance(BigDecimal.valueOf(amountPerIntervalFiat));
-        CryptomoneyAutotask.logProv.LogMessage("STATUS actiontype: " + getActionType().toString() + " new allowanceBuyCoinInFiat: " + getAssociatedAllowance().getAllowance());     
+        CryptomoneyAutotask.logProv.LogMessage("STATUS actiontype: " + getActionType().toString() + " new allowanceBuyCoinInFiat: " + getAssociatedAllowance().getAllowance().setScale(2, RoundingMode.FLOOR));     
         
         //CryptomoneyAutotask.logProv.LogMessage("");
     }

@@ -74,9 +74,6 @@ public class CryptomoneyAutotask
     public static DecimalFormat fiatFormat = new DecimalFormat("#0.00");
     //public static DecimalFormat genericFractionFormat = new DecimalFormat("#0.000");
     
-    public static double BTC_USD_PRICE_MIN_REALISTIC = 1000; //TODO: refactor
-    public static double BTC_USD_PRICE_MAX_REALISTIC = 15000; //todo: may need to change this in the future
-    
     public static FileConfig config;
     
     /**

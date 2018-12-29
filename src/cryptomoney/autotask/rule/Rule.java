@@ -18,6 +18,8 @@ package cryptomoney.autotask.rule;
 
 import cryptomoney.autotask.exchangeaccount.ExchangeAccount;
 import cryptomoney.autotask.CryptomoneyAutotask;
+import cryptomoney.autotask.currency.CoinCurrencyType;
+import cryptomoney.autotask.currency.FiatCurrencyType;
 
 /**
  *
@@ -28,6 +30,8 @@ public abstract class Rule
     ExchangeAccount account;
     private ActionType actionType;
     private RuleType ruleType;
+    CoinCurrencyType coinCurrencyType;
+    FiatCurrencyType fiatCurrencyType;    
     
     public Rule()
     {
@@ -58,6 +62,16 @@ public abstract class Rule
     {
         return actionType;
     }
+    
+    public CoinCurrencyType getCoinCurrencyType()
+    {
+        return this.coinCurrencyType;
+    }
+
+    public FiatCurrencyType getFiatCurrencyType()
+    {
+        return this.fiatCurrencyType;
+    }    
     
     public abstract void doAction();
 

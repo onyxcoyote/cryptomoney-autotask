@@ -21,6 +21,7 @@ import cryptomoney.autotask.allowance.AllowanceFiat;
 import cryptomoney.autotask.allowance.AllowanceType;
 import cryptomoney.autotask.currency.FiatCurrencyType;
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 
 /**
  *
@@ -67,7 +68,7 @@ public class RuleAllowance_DepositFiat extends Rule
         
         
         getAssociatedAllowance().addToAllowance(BigDecimal.valueOf(amountPerIntervalFiat));
-        CryptomoneyAutotask.logProv.LogMessage("STATUS actiontype: " + getActionType().toString() + "new AllowanceDepositFiat: " + getAssociatedAllowance().getAllowance());
+        CryptomoneyAutotask.logProv.LogMessage("STATUS actiontype: " + getActionType().toString() + "new AllowanceDepositFiat: " + getAssociatedAllowance().getAllowance().setScale(2, RoundingMode.FLOOR));
      
         //CryptomoneyAutotask.logProv.LogMessage("");
     }

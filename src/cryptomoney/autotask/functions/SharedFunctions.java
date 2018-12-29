@@ -85,25 +85,28 @@ public class SharedFunctions
             System.exit(1); //don't know what else to do
         }
         
-        if(_coinCurrencyType.equals(CoinCurrencyType.BTC) && _fiatCurrencyType.equals(FiatCurrencyType.USD))
+        
+        try
         {
-            if(coinPrice.doubleValue() < CryptomoneyAutotask.BTC_USD_PRICE_MIN_REALISTIC)
+            CoinPriceLimit limit = CryptomoneyAutotask.app.coinPriceLimits.getLimit(_coinCurrencyType, _fiatCurrencyType);
+            if(coinPrice.doubleValue() < limit.minValue)
             {
-                CryptomoneyAutotask.logMultiplexer.LogMessage("coin price cannot exceed min realistic");
+                CryptomoneyAutotask.logMultiplexer.LogMessage("coin price cannot exceed minimum hard-coded value: " + limit.minValue);
                 System.exit(1); //this means a hard-coded change is needed
             }
 
-            if(coinPrice.doubleValue() > CryptomoneyAutotask.BTC_USD_PRICE_MAX_REALISTIC)
+            if(coinPrice.doubleValue() > limit.maxValue)
             {
-                CryptomoneyAutotask.logMultiplexer.LogMessage("coin price cannot exceed max realistic");
+                CryptomoneyAutotask.logMultiplexer.LogMessage("coin price cannot exceed maximum hard-coded value:" + limit.minValue);
                 System.exit(1); //this means a hard-coded change is needed
             }
         }
-        else
+        catch(Exception ex)
         {
-            CryptomoneyAutotask.logMultiplexer.LogMessage("ERROR! Missing realistic value amounts for type " + _coinCurrencyType + " " + _fiatCurrencyType);
+            CryptomoneyAutotask.logMultiplexer.LogException(ex);
             System.exit(1);
         }
+
         
         return coinPrice;
     }
@@ -125,24 +128,26 @@ public class SharedFunctions
             CryptomoneyAutotask.logMultiplexer.LogMessage("coin price cannot be null");
             System.exit(1); //don't know what else to do
         }
+
         
-        if(_coinCurrencyType.equals(CoinCurrencyType.BTC) && _fiatCurrencyType.equals(FiatCurrencyType.USD))
+        try
         {
-            if(coinPrice.doubleValue() < CryptomoneyAutotask.BTC_USD_PRICE_MIN_REALISTIC) //todo: make this more generic and better
+            CoinPriceLimit limit = CryptomoneyAutotask.app.coinPriceLimits.getLimit(_coinCurrencyType, _fiatCurrencyType);
+            if(coinPrice.doubleValue() < limit.minValue)
             {
-                CryptomoneyAutotask.logMultiplexer.LogMessage("coin price cannot exceed min realistic");
+                CryptomoneyAutotask.logMultiplexer.LogMessage("coin price cannot exceed minimum hard-coded value: " + limit.minValue);
                 System.exit(1); //this means a hard-coded change is needed
             }
 
-            if(coinPrice.doubleValue() > CryptomoneyAutotask.BTC_USD_PRICE_MAX_REALISTIC) //todo: make this more generic and better
+            if(coinPrice.doubleValue() > limit.maxValue)
             {
-                CryptomoneyAutotask.logMultiplexer.LogMessage("coin price cannot exceed max realistic");
+                CryptomoneyAutotask.logMultiplexer.LogMessage("coin price cannot exceed maximum hard-coded value:" + limit.minValue);
                 System.exit(1); //this means a hard-coded change is needed
             }
         }
-        else
+        catch(Exception ex)
         {
-            CryptomoneyAutotask.logMultiplexer.LogMessage("ERROR! Missing realistic value amounts for type " + _coinCurrencyType + " " + _fiatCurrencyType);
+            CryptomoneyAutotask.logMultiplexer.LogException(ex);
             System.exit(1);
         }
         

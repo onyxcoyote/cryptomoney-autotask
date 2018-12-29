@@ -37,8 +37,7 @@ import java.math.RoundingMode;
  */
 public class RuleAction_BuyCoinDCAPostOnly extends Rule
 {
-    private CoinCurrencyType coinCurrencyType;
-    private FiatCurrencyType fiatCurrencyType;
+
     private double maximumAvgOccurrencesPerDay;
     private double minimumQuantityBuyCurrency;
     private double minimumQuantityCoinThreshold;

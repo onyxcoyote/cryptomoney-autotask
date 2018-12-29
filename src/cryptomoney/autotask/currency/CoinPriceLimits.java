@@ -1,5 +1,3 @@
-package cryptomoney.autotask.currency;
-
 /*
     This file is part of cryptomoney-autotask.
 
@@ -16,14 +14,35 @@ package cryptomoney.autotask.currency;
     You should have received a copy of the GNU General Public License
     along with cryptomoney-autotask.  If not, see <https://www.gnu.org/licenses/>.
  */
+package cryptomoney.autotask.currency;
+
+import java.util.ArrayList;
 
 /**
  *
  * @author onyxcoyote <no-reply@onyxcoyote.com>
  */
-public enum FiatCurrencyType
+public class CoinPriceLimits
 {
-    USD,
-    EUR,
-    GBP
+    
+    private ArrayList<CoinPriceLimit> limits = new ArrayList<>();
+    
+    public void addLimit(CoinPriceLimit limit)
+    {
+        limits.add(limit);
+    }
+    
+    public CoinPriceLimit getLimit(CoinCurrencyType _coinCurrencyType, FiatCurrencyType _fiatCurrencyType) throws Exception
+    {
+        for(CoinPriceLimit limit : limits)
+        {
+            if(limit.coinCurrencyType.equals(_coinCurrencyType) &&
+                    limit.fiatCurrencyTypeForMeasure.equals(_fiatCurrencyType))
+            {
+                return limit;
+            }
+        }
+        
+        throw new Exception("Price limit not found " + _coinCurrencyType + " " + _fiatCurrencyType);
+    }
 }
