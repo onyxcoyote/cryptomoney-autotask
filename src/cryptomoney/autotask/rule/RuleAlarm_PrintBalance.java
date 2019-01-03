@@ -92,6 +92,8 @@ public class RuleAlarm_PrintBalance extends Rule
             
         }
         
+        CryptomoneyAutotask.logProv.LogMessage("total accounts: " + this.account.walletAccountIDs.getSize());
+        
         //enumerate possible options (even impossible ones, it will only show those have been loaded into memory)
         for(WalletAccountCurrency curr : WalletAccountCurrency.values())
         {

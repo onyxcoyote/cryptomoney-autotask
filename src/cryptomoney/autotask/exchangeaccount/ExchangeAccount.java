@@ -199,15 +199,35 @@ public class ExchangeAccount
                         coinbaseAccount.getBalance() + " " + 
                         coinbaseAccount.getName()
                         );
-                if(coinbaseAccount.getCurrency().equals(_walletAccountCurrency.toString()) && coinbaseAccount.getPrimary())
+                if(coinbaseAccount.getCurrency().equals(_walletAccountCurrency.toString()))
                 {
-                    if(lookingForCoinbaseAccount != null)
+                    /*if(lookingForCoinbaseAccount != null)
                     {
                         CryptomoneyAutotask.logMultiplexer.LogMessage("ERROR, TWO -PRIMARY- ACCOUNTS OF TYPE " + _walletAccountCurrency.toString() + " FOUND WHEN EXPECTINE ONE, EXITING"); //todo: test this to make sure there would only be one account
                             //in this case, I think there COULD be multiple accounts unless the getPrimary() takes care of it
                         System.exit(1);
-                    }
+                    }*/
                     lookingForCoinbaseAccount = coinbaseAccount;
+                }
+            }
+            
+            //loop again to find primary (where applicable), override the previous value
+            for(CoinbaseAccount coinbaseAccount : coinbaseAccounts)
+            {
+                if(coinbaseAccount.getPrimary())
+                {
+                    CryptomoneyAutotask.logProv.LogMessage("coinbase account retrieved: " + coinbaseAccount.getId() + " " + 
+                            coinbaseAccount.getCurrency() + " " + 
+                            coinbaseAccount.getType() + " " + 
+                            coinbaseAccount.getPrimary() + " " + 
+                            coinbaseAccount.getBalance() + " " + 
+                            coinbaseAccount.getName()
+                            );
+
+                    if(coinbaseAccount.getCurrency().equals(_walletAccountCurrency.toString()) && coinbaseAccount.getPrimary())
+                    {
+                        lookingForCoinbaseAccount = coinbaseAccount;
+                    }
                 }
             }
             

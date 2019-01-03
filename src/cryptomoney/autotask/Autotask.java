@@ -450,6 +450,82 @@ public class Autotask
                 CryptomoneyAutotask.logProv.LogMessage("rule disabled: " + fullPrefix);
             }            
         }
+        
+        //Additional coinbase wallets to include in alarm print
+        for(int i=1;i<=20;i++)
+        {        
+            String prefix = "ALARM_PRINT_BALANCE_INCLUDE_COINBASE_WALLET_";
+            String fullPrefix = prefix+i+"_";
+            
+            //CryptomoneyAutotask.logProv.LogMessage("checking rule (one-time): " + fullPrefix);   
+            
+            if(CryptomoneyAutotask.config.getConfigString(fullPrefix+"enable")==null)
+            {
+                break;
+            }
+            
+            boolean ACTION_DEPOSIT_FIAT__enable = Boolean.parseBoolean(CryptomoneyAutotask.config.getConfigString(fullPrefix+"enable"));        
+            if(ACTION_DEPOSIT_FIAT__enable)
+            {
+                CryptomoneyAutotask.logProv.LogMessage("applying rule (one-time): " + fullPrefix);    
+                
+                //doesn't add a rule, just caches the account
+                WalletAccountCurrency walletAccountCurrencyType = WalletAccountCurrency.valueOf(CryptomoneyAutotask.config.getConfigString(fullPrefix+"currency_type"));
+                
+                String wallet = account1.getCoinbaseRegularAccount_Id(walletAccountCurrencyType);
+                lsoc.library.utilities.Sleep.Sleep(200); //throttle to prevent too quick API calls
+                
+                if(wallet != null && wallet != "")
+                {
+                    CryptomoneyAutotask.logProv.LogMessage("coinbase wallet cached: " + wallet);    
+                }
+                else
+                {
+                    CryptomoneyAutotask.logProv.LogMessage("coinbase wallet not found: " + walletAccountCurrencyType.toString());    
+                }
+            }
+            else
+            {
+                CryptomoneyAutotask.logProv.LogMessage("rule disabled: " + fullPrefix);
+            }              
+        }
+        
+        //Additional coinbase PRO wallets to include in alarm print
+        for(int i=1;i<=20;i++)
+        {        
+            String prefix = "ALARM_PRINT_BALANCE_INCLUDE_COINBASE_PRO_WALLET_";
+            String fullPrefix = prefix+i+"_";
+            
+            if(CryptomoneyAutotask.config.getConfigString(fullPrefix+"enable")==null)
+            {
+                break;
+            }
+            
+            boolean ACTION_DEPOSIT_FIAT__enable = Boolean.parseBoolean(CryptomoneyAutotask.config.getConfigString(fullPrefix+"enable"));        
+            if(ACTION_DEPOSIT_FIAT__enable)
+            {
+                CryptomoneyAutotask.logProv.LogMessage("applying rule (one-time): " + fullPrefix);    
+                
+                //doesn't add a rule, just caches the account
+                WalletAccountCurrency walletAccountCurrencyType = WalletAccountCurrency.valueOf(CryptomoneyAutotask.config.getConfigString(fullPrefix+"currency_type"));
+                
+                Account wallet = account1.getCoinbaseProWalletAccount(walletAccountCurrencyType);
+                lsoc.library.utilities.Sleep.Sleep(200); //throttle to prevent too quick API calls
+                
+                if(wallet != null)
+                {
+                    CryptomoneyAutotask.logProv.LogMessage("coinbase PRO wallet cached: " + wallet.getId());    
+                }
+                else
+                {
+                    CryptomoneyAutotask.logProv.LogMessage("coinbase PRO wallet not found: " + walletAccountCurrencyType.toString());    
+                }
+            }
+            else
+            {
+                CryptomoneyAutotask.logProv.LogMessage("rule disabled: " + fullPrefix);
+            }              
+        }        
     }
     
     

@@ -56,4 +56,9 @@ public class WalletAccountIDs
         
         
     }
+    
+    public int getSize()
+    {
+        return accounts.size();
+    }
 }

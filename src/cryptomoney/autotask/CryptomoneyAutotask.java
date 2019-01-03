@@ -84,7 +84,7 @@ public class CryptomoneyAutotask
     { 
         try
         {
-            String version = "0.15";
+            String version = "0.16";
 
             try
             {
