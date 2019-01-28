@@ -1,4 +1,5 @@
-A program used to automate tasks on Coinbase Pro.
+A program used to automate tasks on Coinbase Pro, using the Coinbase Pro API.
+
 see LICENSE.txt
 
 Examples:
@@ -18,13 +19,28 @@ How to use:
 2) update properties files with the desired tasks.  Up to 20 versions of each task can be added.  Examples:
 ACTION_BUY_COIN_DCA_POSTONLY_1_*
 ACTION_BUY_COIN_DCA_POSTONLY_2_*
+3) update metaconfig.properties to point to your new properties file
+4) to set up program as a service on a CentOS server, there is an example service file included as cryptomoney-autotask-service 
+#copy cryptomoney-autotask-service to /etc/init.d/
+#copy the compiled program code, library files in lib/ folder, and properties files, to the desired location, e.g. /srv/cryptomoney-autotask/
+#enable autostart (one-time only):
+chkconfig cryptomoney-autotask-service on
+#to start it
+service cryptomoney-autotask-service start
+#to stop it
+service cryptomoney-autotask-service stop
+#to check status
+service cryptomoney-autotask-service status
+#to restart
+service cryptomoney-autotask-service restart
+
 
 The available tasks are:
-ACTION_BUY_COIN_DCA_POSTONLY_* - buys a specific cryptocurrency in specific amounts and frequencies.  Uses dollar-cost-averaging, and attempts to use post-only if possible which (as of today) has no fees.  If the trade is not successful after a period of time, it will make an immediate market trade, which does (as of today) have a fee.
-ACTION_WITHDRAW_COIN_TO_COINBASE_* - withdraws a type of cryptocurrency from CoinbasePro to Coinbase, in specific amounts and frequencies
-ACTION_DEPOSIT_FIAT_* - deposit fiat currency from a bank account to CoinbasePro
-ALARM_PRINT_BALANCE_* - prints relevant account balance
-ALARM_PRINT_BALANCE_INCLUDE_* - include specific not relevant account balances in the account balance output
+1) ACTION_BUY_COIN_DCA_POSTONLY_* - buys a specific cryptocurrency in specific amounts and frequencies.  Uses dollar-cost-averaging, and attempts to use post-only if possible which (as of today) has no fees.  If the trade is not successful after a period of time, it will make an immediate market trade, which does (as of today) have a fee.
+2) ACTION_WITHDRAW_COIN_TO_COINBASE_* - withdraws a type of cryptocurrency from CoinbasePro to Coinbase, in specific amounts and frequencies
+3) ACTION_DEPOSIT_FIAT_* - deposit fiat currency from a bank account to CoinbasePro
+4) ALARM_PRINT_BALANCE_* - prints relevant account balance
+5) ALARM_PRINT_BALANCE_INCLUDE_* - include specific not relevant account balances in the account balance output
 
 
 

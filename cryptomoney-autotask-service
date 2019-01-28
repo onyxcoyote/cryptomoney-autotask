@@ -1,0 +1,70 @@
+#!/bin/sh
+# chkconfig: 360 80 10
+# description: startup script for cryptomoney-autotask.  THIS FILE IS PUBLIC DOMAIN.
+SERVICE_NAME=cryptomoney-autotask-service
+PATH_TO_SCRIPT=/srv/cryptomoney-autotask/runcryptomoneyautotask.sh
+PID_PATH_NAME=/tmp/cryptomoney-autotask-pid
+
+echo "checking pid file"
+if [ -f $PID_PATH_NAME ]; then
+ oldPID=$(<$PID_PATH_NAME)
+ echo "pid file exists $oldPID"
+ if [ ! -d "/proc/$oldPID" ]; then
+    echo "removing PID file, it is not actually running $PID_PATH_NAME"
+    rm $PID_PATH_NAME
+ fi
+fi
+
+
+case $1 in
+    start)
+        echo "Starting $SERVICE_NAME ..."
+        if [ ! -f $PID_PATH_NAME ]; then
+            echo "$SERVICE_NAME starting ..."
+            sleep 2           
+            echo $PATH_TO_SCRIPT
+            nohup $PATH_TO_SCRIPT /srv/cryptomoney-autotask 2>> /dev/null >> /dev/null &
+            echo $! > $PID_PATH_NAME
+            echo "$SERVICE_NAME started ..."
+        else
+            echo "$SERVICE_NAME is already running ..."
+        fi
+    ;;
+    stop)
+        if [ -f $PID_PATH_NAME ]; then
+            PID=$(cat $PID_PATH_NAME);
+            echo "$SERVICE_NAME stoping ..."
+            pkill -P $PID
+            echo "$SERVICE_NAME stopped ..."
+            rm $PID_PATH_NAME
+        else
+            echo "$SERVICE_NAME is not running ..."
+        fi
+    ;;
+    restart)
+        if [ -f $PID_PATH_NAME ]; then
+            PID=$(cat $PID_PATH_NAME);
+            echo "$SERVICE_NAME stopping ...";
+            pkill -P $PID;
+            echo "$SERVICE_NAME stopped ...";
+            rm $PID_PATH_NAME
+            echo "$SERVICE_NAME starting ..."
+            sleep 2
+            echo $PATH_TO_SCRIPT
+	    nohup $PATH_TO_SCRIPT /srv/cryptomoney-autotask 2>> /dev/null >> /dev/null &
+            echo $! > $PID_PATH_NAME
+            echo "$SERVICE_NAME started ..."
+        else
+            echo "$SERVICE_NAME is not running ..."
+        fi
+    ;;
+    status)
+    	echo "checking status $SERVICE_NAME ..."
+        if [ ! -f $PID_PATH_NAME ]; then
+            echo "$SERVICE_NAME is NOT running..."
+        else
+            echo "$SERVICE_NAME is running ..."
+        fi
+    ;;
+esac 
+
