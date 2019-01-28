@@ -127,6 +127,8 @@ public class ExchangeAccount
     }
 
     /**
+     * API CALL
+     * Get the coinbase account for a specific accountID
      * This is needed for informational purposes only.  In most cases, it's only necessary to get the account_id.
      * @return 
      */
@@ -174,6 +176,7 @@ public class ExchangeAccount
     
     /**
      * API CALL
+     * Get the coinbase account ID for a specific WalletAccountCurrency
      * @return 
      */
     public String getCoinbaseRegularAccount_Id(WalletAccountCurrency _walletAccountCurrency)
@@ -385,7 +388,7 @@ public class ExchangeAccount
         {
             //OrderService orderService = new com.coinbase.exchange.api.orders.OrderService();        
             
-            List<Order> openOrders = CryptomoneyAutotask.app.orderService().getOpenOrders();
+            List<Order> openOrders = CryptomoneyAutotask.orderService.getOpenOrders();
             ArrayList<Order> orphanedOrders = new ArrayList<>();
             ArrayList<Order> ordersNotOpen = new ArrayList<>();
             ArrayList<Order> ordersToCancel = new ArrayList<>();
@@ -474,7 +477,7 @@ public class ExchangeAccount
                         lsoc.library.utilities.Sleep.Sleep(100); //slow down so we're not querying too fast. this limits it to 10x/second
 
                         CryptomoneyAutotask.logProv.LogMessage("submitting cancel for " + orderToCancel.getId() + " " + orderToCancel.toString());
-                        String response = CryptomoneyAutotask.app.orderService().cancelOrder(orderToCancel.getId()); //API CALL
+                        String response = CryptomoneyAutotask.orderService.cancelOrder(orderToCancel.getId()); //API CALL
                         CryptomoneyAutotask.logMultiplexer.LogMessage("Requested order cancel, response: " + response);
                         //orders.remove(orderToCancel.getId()); //wait until later to verify it's been cancelled ? Or mark it as something we're cancelling?
                         ordersNotOpen.add(orderToCancel); //assume the cancel was complete
@@ -503,7 +506,7 @@ public class ExchangeAccount
                     Fill fill = null;
 
                     int resultLimit = 20;
-                    List<Fill> fills = CryptomoneyAutotask.app.orderService().getFillByOrderId(missingOrder.getId(), resultLimit);
+                    List<Fill> fills = CryptomoneyAutotask.orderService.getFillByOrderId(missingOrder.getId(), resultLimit);
 
                     if(fills.size() > 0)
                     {
@@ -605,7 +608,7 @@ public class ExchangeAccount
             
             NewOrderSingle newOrd = new NewLimitOrderSingle(coinAmountToPurchase, purchasePrice, post_only, clientOid, type, side, product_id, stp, funds);
             
-            Order order = CryptomoneyAutotask.app.orderService().createOrder(newOrd); //API CALL
+            Order order = CryptomoneyAutotask.orderService.createOrder(newOrd); //API CALL
             this.orders.put(order.getId(), order);
             CryptomoneyAutotask.logProv.LogMessage("order placed, tracking client_oid: " +  order.getId() + " " + order.toString());
             //Cbpdca.logProv.LogMessage("order details: " + order.toString());
@@ -669,7 +672,7 @@ public class ExchangeAccount
                 return null;
             }
             
-            Order order = CryptomoneyAutotask.app.orderService().createOrder(newOrd); //API CALL
+            Order order = CryptomoneyAutotask.orderService.createOrder(newOrd); //API CALL
             
             if(order == null)
             {

@@ -88,7 +88,7 @@ public class SharedFunctions
         
         try
         {
-            CoinPriceLimit limit = CryptomoneyAutotask.app.coinPriceLimits.getLimit(_coinCurrencyType, _fiatCurrencyType);
+            CoinPriceLimit limit = CryptomoneyAutotask.app.coinPriceLimitsValue.getLimit(_coinCurrencyType, _fiatCurrencyType);
             if(coinPrice.doubleValue() < limit.minValue)
             {
                 CryptomoneyAutotask.logMultiplexer.LogMessage("coin price cannot exceed minimum hard-coded value: " + limit.minValue);
@@ -132,7 +132,7 @@ public class SharedFunctions
         
         try
         {
-            CoinPriceLimit limit = CryptomoneyAutotask.app.coinPriceLimits.getLimit(_coinCurrencyType, _fiatCurrencyType);
+            CoinPriceLimit limit = CryptomoneyAutotask.app.coinPriceLimitsValue.getLimit(_coinCurrencyType, _fiatCurrencyType);
             if(coinPrice.doubleValue() < limit.minValue)
             {
                 CryptomoneyAutotask.logMultiplexer.LogMessage("coin price cannot exceed minimum hard-coded value: " + limit.minValue);

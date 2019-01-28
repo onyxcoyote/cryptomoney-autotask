@@ -18,8 +18,6 @@ package cryptomoney.autotask;
 
 import java.util.ArrayList;
 
-
-
 import com.coinbase.exchange.api.orders.OrderService;
 import com.coinbase.exchange.api.accounts.Account;
 
@@ -36,64 +34,43 @@ import cryptomoney.autotask.rule.*;
  *
  * @author onyxcoyote <no-reply@onyxcoyote.com>
  */
-/*@Component
-@Configuration
-@ComponentScan(basePackages = {"com.coinbase.exchange.api.exchange.Signature","com.coinbase.exchange.api.orders.OrderService","com.coinbase.exchange.api.exchange.GdaxExchangeImpl"})
-@ComponentScan({"com.coinbase.exchange.api.exchange.Signature","com.coinbase.exchange.api.orders.OrderService","com.coinbase.exchange.api.exchange.GdaxExchangeImpl"})
-//@Controller
-*/
 public class Autotask
 {
     
-    public ExchangeAccount account1;
-
-
+    public ExchangeAccount account1; //for now it can only work on 1 account at a time, this works better with the coinbase pro library and is more secure anyway
     
-    
-    public boolean running = false;
-    //public static HashMap<Integer, Account> accounts = new HashMap<>();
-    
+    public boolean running = false;   
     
     public Rules rules = new Rules();
     public ArrayList<Rule> availableRules = new ArrayList<>();
     
     private boolean executeImmediately;
     
-    private FiatSafetyLimits fiatSafetyLimits = new FiatSafetyLimits();
-    private CoinSafetyLimits coinSafetyLimits = new CoinSafetyLimits();
-    public CoinPriceLimits coinPriceLimits = new CoinPriceLimits();
+    private FiatSafetyLimits fiatSafetyLimitsQuantity = new FiatSafetyLimits();
+    private CoinSafetyLimits coinSafetyLimitsQuantity = new CoinSafetyLimits();
+    public CoinPriceLimits coinPriceLimitsValue = new CoinPriceLimits();
     private static double MAXIMUM_SAFE_NUMBER_OF_EXECUTIONS_PER_DAY = 5000; //limit set to prevent hitting the API too much
     
-    //public static int iterationIntervalMS = 1000*60*5; //5 minutes
-    
 
+
+    //todo: add more restrictions: https://www.coinbase.com/legal/trading_rules
     
-    //public ILoggingProvider logProv = new LoggingProviderSimple();
-  
-    /*public void run(String[] args) throws Exception 
-    {
-        
-    }*/
-    
-    //todo: more restrictions: https://www.coinbase.com/legal/trading_rules
-    
-    //@Autowired
     public Autotask(boolean _executeImmediately)
     {
         //note: these limits may need to be adjusted by config
-        fiatSafetyLimits.addLimit(new FiatSafetyLimit(FiatCurrencyType.USD, 200)); //limit for sanity check
-        fiatSafetyLimits.addLimit(new FiatSafetyLimit(FiatCurrencyType.EUR, 175)); //limit for sanity check
-        fiatSafetyLimits.addLimit(new FiatSafetyLimit(FiatCurrencyType.GBP, 175)); //limit for sanity check
+        fiatSafetyLimitsQuantity.addLimit(new FiatSafetyLimit(FiatCurrencyType.USD, 200)); //limit for sanity check
+        fiatSafetyLimitsQuantity.addLimit(new FiatSafetyLimit(FiatCurrencyType.EUR, 175)); //limit for sanity check
+        fiatSafetyLimitsQuantity.addLimit(new FiatSafetyLimit(FiatCurrencyType.GBP, 175)); //limit for sanity check
         
         //note: these limits may need to be adjusted by config
-        coinSafetyLimits.addLimit(new CoinSafetyLimit(CoinCurrencyType.BTC, 0.1)); //limit for sanity check
-        coinSafetyLimits.addLimit(new CoinSafetyLimit(CoinCurrencyType.ETH, 1.0)); //limit for sanity check
+        coinSafetyLimitsQuantity.addLimit(new CoinSafetyLimit(CoinCurrencyType.BTC, 0.1)); //limit for sanity check
+        coinSafetyLimitsQuantity.addLimit(new CoinSafetyLimit(CoinCurrencyType.ETH, 1.0)); //limit for sanity check
         
         //note: these limits may need to be adjusted by config since the realistic value can change over time
-        coinPriceLimits.addLimit(new CoinPriceLimit(CoinCurrencyType.BTC, FiatCurrencyType.USD, 1000, 17500));
-        coinPriceLimits.addLimit(new CoinPriceLimit(CoinCurrencyType.ETH, FiatCurrencyType.USD, 25, 500));
-        coinPriceLimits.addLimit(new CoinPriceLimit(CoinCurrencyType.LTC, FiatCurrencyType.USD, 10, 300));
-        coinPriceLimits.addLimit(new CoinPriceLimit(CoinCurrencyType.BCH, FiatCurrencyType.USD, 10, 300));
+        coinPriceLimitsValue.addLimit(new CoinPriceLimit(CoinCurrencyType.BTC, FiatCurrencyType.USD, 1000, 17500));
+        coinPriceLimitsValue.addLimit(new CoinPriceLimit(CoinCurrencyType.ETH, FiatCurrencyType.USD, 25, 500));
+        coinPriceLimitsValue.addLimit(new CoinPriceLimit(CoinCurrencyType.LTC, FiatCurrencyType.USD, 10, 300));
+        coinPriceLimitsValue.addLimit(new CoinPriceLimit(CoinCurrencyType.BCH, FiatCurrencyType.USD, 10, 300));
         
         account1 = new ExchangeAccount(); //todo: change this to "BTC"?  In case we have other types of accounts running the same API key (like ETH or LTC)
         executeImmediately = _executeImmediately;
@@ -104,26 +81,21 @@ public class Autotask
     /**
      * @return 
      */
-    public OrderService orderService()
+    /*public OrderService orderService()
     { 
         return CryptomoneyAutotask.orderService;
-        //return new OrderService(); 
-        //return orderService;
-    }
+    }*/
     
     public void Run()
     {
-        Initialize(account1); //TODO: credentials/exchange info should probably tie to account instead of being static params
-        
-        //CancelOpenOrders();
+        Initialize();
         
         DoMainLoop();
     }
     
-    private void Initialize(ExchangeAccount _account)
+    private void Initialize()
     {
         LoadRuleHelp();
-        LoadAccounts();
         try
         {
             LoadRules();
@@ -136,9 +108,13 @@ public class Autotask
         ValidateRules();
         TestAccountAPI();
         
-        //todo: https://docs.pro.coinbase.com/#get-products min BTC purchase size can change in the future
+        //todo: https://docs.pro.coinbase.com/#get-products min BTC purchase size can change in the future, get the value dynamically
     }
     
+    
+    /**
+     * Load all possible rule types.  This is used to validate actual rules.
+     */
     private void LoadRuleHelp()
     {
         availableRules.add(new RuleAction_BuyCoinDCAPostOnly());
@@ -159,20 +135,9 @@ public class Autotask
         }
     }
     
-    private void LoadAccounts()
-    {
-        //accounts.put(1, account1); //account #1
-    }
-    
     private void LoadRules() throws java.io.IOException, Exception
     {
         //todo: use BigDecimal instead of double for calculations
-        
-        
-        
-        
-        
-        
         
         
         //ALARM RULES
@@ -189,14 +154,7 @@ public class Autotask
                 ALARM_PRINT_BALANCE__maximumAvgOccurrencesPerDay);
             rules.add(alarm_printBalance);
         }
-        /*
-            TO ADD
-            -account 1 - ALARM if buy_btc_allowance > $20 and USD balance < $21
-            -account 1 - ALARM if transfer_btc_coinbase_pro_to_coinbase_allowance > $20 and BTC balance < $21->bitcoin
-            -account 1 - ALARM if coinbase_btc_balance <  $50->BTC, max once per day?
-        */
-        //todo:
-        
+
         
       
         //ACTION RULES
@@ -230,7 +188,7 @@ public class Autotask
                     
                 //ALLOWANCE RULE
                 double ACTION_BUY_COIN_DCA_POSTONLY__amountPerDayCurrencyQuantity = Double.parseDouble(CryptomoneyAutotask.config.getConfigString(fullPrefix+"amountPerDayCurrencyQuantity"));
-                if(ACTION_BUY_COIN_DCA_POSTONLY__amountPerDayCurrencyQuantity < 0 || ACTION_BUY_COIN_DCA_POSTONLY__amountPerDayCurrencyQuantity > this.fiatSafetyLimits.getLimit(fiatCurrencyType))
+                if(ACTION_BUY_COIN_DCA_POSTONLY__amountPerDayCurrencyQuantity < 0 || ACTION_BUY_COIN_DCA_POSTONLY__amountPerDayCurrencyQuantity > this.fiatSafetyLimitsQuantity.getLimit(fiatCurrencyType))
                 {
                     throw new Exception(fullPrefix+"amountPerDayUS exceeds hard-coded safe maximum");
                 }
@@ -268,15 +226,15 @@ public class Autotask
                 {
                     throw new Exception(fullPrefix+"maximumAvgOccurrencesPerDay exceeds hard-coded safe maximum");
                 }      
-                if(ACTION_BUY_COIN_DCA_POSTONLY__minimumQuantityBuyCurrencyQuantity < 1 || ACTION_BUY_COIN_DCA_POSTONLY__minimumQuantityBuyCurrencyQuantity > this.fiatSafetyLimits.getLimit(fiatCurrencyType))
+                if(ACTION_BUY_COIN_DCA_POSTONLY__minimumQuantityBuyCurrencyQuantity < 1 || ACTION_BUY_COIN_DCA_POSTONLY__minimumQuantityBuyCurrencyQuantity > this.fiatSafetyLimitsQuantity.getLimit(fiatCurrencyType))
                 {
                     throw new Exception(fullPrefix+"minimumQuantityBuyCurrencyQuantity exceeds hard-coded safe maximum");
                 }      
-                if(ACTION_BUY_COIN_DCA_POSTONLY__minimumQuantityCoinThreshold < 0.0001 || ACTION_BUY_COIN_DCA_POSTONLY__minimumQuantityCoinThreshold > this.coinSafetyLimits.getLimit(coinCurrencyType))
+                if(ACTION_BUY_COIN_DCA_POSTONLY__minimumQuantityCoinThreshold < 0.0001 || ACTION_BUY_COIN_DCA_POSTONLY__minimumQuantityCoinThreshold > this.coinSafetyLimitsQuantity.getLimit(coinCurrencyType))
                 {
                     throw new Exception(fullPrefix+"minimumQuantityCoinThreshold exceeds hard-coded safe maximum");
                 }      
-                if(ACTION_BUY_COIN_DCA_POSTONLY__maximumQuantityCoin < 0.001 || ACTION_BUY_COIN_DCA_POSTONLY__maximumQuantityCoin > this.coinSafetyLimits.getLimit(coinCurrencyType))
+                if(ACTION_BUY_COIN_DCA_POSTONLY__maximumQuantityCoin < 0.001 || ACTION_BUY_COIN_DCA_POSTONLY__maximumQuantityCoin > this.coinSafetyLimitsQuantity.getLimit(coinCurrencyType))
                 {
                     throw new Exception(fullPrefix+"maximumQuantityCoin exceeds hard-coded safe maximum");
                 }      
@@ -303,7 +261,7 @@ public class Autotask
         }
         
         
-        //account 1 - ACTION withdraw X bitcoin (from coinbase pro) to coinbase account 
+        //account 1 - ACTION withdraw X coin (from coinbase pro) to coinbase account 
         for(int i=1;i<=20;i++)
         {
             String prefix = "ACTION_WITHDRAW_COIN_TO_COINBASE_";
@@ -332,7 +290,7 @@ public class Autotask
                 
                 //ALLOWANCE RULE            
                 double ACTION_WITHDRAW_COIN_TO_COINBASE__amountPerDayCurrencyQuantity = Double.parseDouble(CryptomoneyAutotask.config.getConfigString(fullPrefix+"amountPerDayCurrencyQuantity"));
-                if(ACTION_WITHDRAW_COIN_TO_COINBASE__amountPerDayCurrencyQuantity < 0 || ACTION_WITHDRAW_COIN_TO_COINBASE__amountPerDayCurrencyQuantity > this.fiatSafetyLimits.getLimit(fiatCurrencyType))
+                if(ACTION_WITHDRAW_COIN_TO_COINBASE__amountPerDayCurrencyQuantity < 0 || ACTION_WITHDRAW_COIN_TO_COINBASE__amountPerDayCurrencyQuantity > this.fiatSafetyLimitsQuantity.getLimit(fiatCurrencyType))
                 {
                     throw new Exception(fullPrefix+"amountPerDayCurrencyQuantity exceeds hard-coded safe maximum");
                 }
@@ -353,11 +311,11 @@ public class Autotask
                 {
                     throw new Exception(fullPrefix+"maximumAvgOccurrencesPerDay exceeds hard-coded safe maximum");
                 }
-                if(ACTION_WITHDRAW_COIN_TO_COINBASE__minimumCurrencyQuantityThreshold < 0 || ACTION_WITHDRAW_COIN_TO_COINBASE__minimumCurrencyQuantityThreshold > this.fiatSafetyLimits.getLimit(fiatCurrencyType))
+                if(ACTION_WITHDRAW_COIN_TO_COINBASE__minimumCurrencyQuantityThreshold < 0 || ACTION_WITHDRAW_COIN_TO_COINBASE__minimumCurrencyQuantityThreshold > this.fiatSafetyLimitsQuantity.getLimit(fiatCurrencyType))
                 {
                     throw new Exception(fullPrefix+"minimumCurrencyQuantityThreshold exceeds hard-coded safe maximum");
                 }
-                if(ACTION_WITHDRAW_COIN_TO_COINBASE__maximumCurrencyQuantity < 0 || ACTION_WITHDRAW_COIN_TO_COINBASE__maximumCurrencyQuantity > this.fiatSafetyLimits.getLimit(fiatCurrencyType))
+                if(ACTION_WITHDRAW_COIN_TO_COINBASE__maximumCurrencyQuantity < 0 || ACTION_WITHDRAW_COIN_TO_COINBASE__maximumCurrencyQuantity > this.fiatSafetyLimitsQuantity.getLimit(fiatCurrencyType))
                 {
                     throw new Exception(fullPrefix+"maximumCurrencyQuantity exceeds hard-coded safe maximum");
                 }
@@ -408,7 +366,7 @@ public class Autotask
                 
                 //ALLOWANCE RULE            
                 double ACTION_DEPOSIT_FIAT__amountPerDayCurrencyQuantity  = Double.parseDouble(CryptomoneyAutotask.config.getConfigString(fullPrefix+"amountPerDayCurrencyQuantity"));
-                if(ACTION_DEPOSIT_FIAT__amountPerDayCurrencyQuantity < 0 || ACTION_DEPOSIT_FIAT__amountPerDayCurrencyQuantity > this.fiatSafetyLimits.getLimit(fiatCurrencyType))
+                if(ACTION_DEPOSIT_FIAT__amountPerDayCurrencyQuantity < 0 || ACTION_DEPOSIT_FIAT__amountPerDayCurrencyQuantity > this.fiatSafetyLimitsQuantity.getLimit(fiatCurrencyType))
                 {
                     throw new Exception(fullPrefix+"amountPerDayCurrencyQuantity exceeds hard-coded safe maximum");
                 }
@@ -428,11 +386,11 @@ public class Autotask
                 {
                     throw new Exception(fullPrefix+"maximumAvgOccurrencesPerDay exceeds hard-coded safe maximum");
                 }            
-                if(ACTION_DEPOSIT_FIAT__minimumCurrencyQuantityThreshold < 0 || ACTION_DEPOSIT_FIAT__minimumCurrencyQuantityThreshold > this.fiatSafetyLimits.getLimit(fiatCurrencyType))
+                if(ACTION_DEPOSIT_FIAT__minimumCurrencyQuantityThreshold < 0 || ACTION_DEPOSIT_FIAT__minimumCurrencyQuantityThreshold > this.fiatSafetyLimitsQuantity.getLimit(fiatCurrencyType))
                 {
                     throw new Exception(fullPrefix+"minimumCurrencyQuantityThreshold exceeds hard-coded safe maximum");
                 }
-                if(ACTION_DEPOSIT_FIAT__maximumCurrencyQuantity < 0 || ACTION_DEPOSIT_FIAT__maximumCurrencyQuantity > this.fiatSafetyLimits.getLimit(fiatCurrencyType))
+                if(ACTION_DEPOSIT_FIAT__maximumCurrencyQuantity < 0 || ACTION_DEPOSIT_FIAT__maximumCurrencyQuantity > this.fiatSafetyLimitsQuantity.getLimit(fiatCurrencyType))
                 {
                     throw new Exception(fullPrefix+"maximumCurrencyQuantity exceeds hard-coded safe maximum");
                 }
@@ -563,7 +521,9 @@ public class Autotask
         }
     }
 
-    
+    /**
+     * Main loop
+     */
     private void DoMainLoop()
     {
         running = true;
@@ -572,8 +532,8 @@ public class Autotask
         {
             ExecuteRules();
             
-            lsoc.library.utilities.Sleep.Sleep(CryptomoneyAutotask.iterationIntervalMS); //sleep X minutes
-            //todo: this is slightly off because it might take more than 1 minute to run through the code before getting to this point, optionally use a timer instead
+            lsoc.library.utilities.Sleep.Sleep(CryptomoneyAutotask.iterationIntervalMS); //sleep X milli-seconds
+            //todo: this is slightly off because it might take more than 1 minute to run through the code before getting to this point, use a timer instead if more exact timing is important
         }
         
     }

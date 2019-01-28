@@ -33,6 +33,11 @@ public class WalletAccountID
         account_Id = _account_Id;
     }
     
+    /**
+     * set wallet's account_id
+     * @param _account_ID
+     * @throws Exception 
+     */
     public void setAccount_Id(String _account_ID) throws Exception
     {
         if(this.account_Id == null)
@@ -41,6 +46,9 @@ public class WalletAccountID
             throw new Exception("can't set account ID already set");
     }
     
+    /**
+     * return wallet's account_id
+     */
     public String getAccount_Id()
     {
         return this.account_Id;
