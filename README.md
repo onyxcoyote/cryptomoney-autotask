@@ -7,7 +7,7 @@ Examples:
 
 
 How to compile:
-1) compile gdax-java (NOTE: this program currently uses a version of gdax-java that does not exist yet, therefore it is not possible to compile this program without making some changes to gdax-java)
+1) compile gdax-java as a library, it is not necessary to input API keys into gdax-java (NOTE: this program currently uses a version of gdax-java that does not exist yet, therefore it is not possible to compile this program without making some changes to gdax-java)
 2) compile lsoclibrary
 3) compile this program
 
