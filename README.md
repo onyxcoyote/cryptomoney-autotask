@@ -38,10 +38,12 @@ service cryptomoney-autotask-service restart
 The available tasks are:
 1) ACTION_BUY_COIN_DCA_POSTONLY_* - buys a specific cryptocurrency in specific amounts and frequencies.  Uses dollar-cost-averaging, and attempts to use post-only if possible which (as of today) has no fees.  If the trade is not successful after a period of time, it will make an immediate market trade, which does (as of today) have a fee.
 2) ACTION_WITHDRAW_COIN_TO_COINBASE_* - withdraws a type of cryptocurrency from CoinbasePro to Coinbase, in specific amounts and frequencies
-3) ACTION_DEPOSIT_FIAT_* - deposit fiat currency from a bank account to CoinbasePro
-4) ALARM_PRINT_BALANCE_* - prints relevant account balance
-5) ALARM_PRINT_BALANCE_INCLUDE_* - include specific not relevant account balances in the account balance output
-6) ALLOWANCE ALLOWANCE_WITHDRAW_COIN_TO_CRYPTO_* - withdraws a type of cryptocurrency to a specified crypto wallet, given a minimum balance in coinbasePro of that cryptocurrency
+3) ACTION_WITHDRAW_COIN_TO_COINBASE_BELOW_MINIMUM_BALANCE_* - withdraws a type of cryptocurrency from CoinabasePro to Coinbase, in specific amounts and frequencies, but only if the destination account balance (measured in fiat), is below a specified amount
+4) ALLOWANCE ALLOWANCE_WITHDRAW_COIN_TO_CRYPTO_* - withdraws a type of cryptocurrency to a specified crypto wallet, given a minimum balance in coinbasePro of that cryptocurrency
+5) ACTION_DEPOSIT_FIAT_* - deposit fiat currency from a bank account to CoinbasePro
+6) ALARM_PRINT_BALANCE_* - prints relevant account balance
+7) ALARM_PRINT_BALANCE_INCLUDE_* - include specific not relevant account balances in the account balance output
+ALLOWANCE ALLOWANCE_WITHDRAW_COIN_TO_CRYPTO_* - withdraws a type of cryptocurrency to a specified crypto wallet, given a minimum balance in coinbasePro of that cryptocurrency
 
 
  
