@@ -17,8 +17,9 @@
 package cryptomoney.autotask.rule;
 
 import cryptomoney.autotask.CryptomoneyAutotask;
-import cryptomoney.autotask.allowance.AllowanceFiat;
+import cryptomoney.autotask.allowance.AllowanceCoinFiat;
 import cryptomoney.autotask.allowance.AllowanceType;
+import cryptomoney.autotask.currency.CoinCurrencyType;
 import cryptomoney.autotask.currency.FiatCurrencyType;
 
 import java.util.List;
@@ -27,23 +28,25 @@ import java.math.RoundingMode;
 import java.util.UUID;
 
 /**
- *
+ * allows additional withdrawal to coinbase if that coinbase wallet is below a specified minimum balance in the destination account
  * @author onyxcoyote <no-reply@onyxcoyote.com>
  */
-public class RuleAllowance_DepositFiat extends Rule
+public class RuleAllowance_WithdrawCoinToCoinbaseBelowMinimumDestinationBalance extends Rule
 {
+    private CoinCurrencyType coinCurrencyType;
     private FiatCurrencyType fiatCurrencyType;    
     private double amountPerDayFiat;
     
-    public RuleAllowance_DepositFiat()
+    public RuleAllowance_WithdrawCoinToCoinbaseBelowMinimumDestinationBalance()
     {
-        super(null, RuleType.ALLOWANCE, ActionType.ALLOWANCE_DEPOSIT_FIAT);
+        super(null, RuleType.ALLOWANCE, ActionType.ALLOWANCE_WITHDRAW_COIN_TO_COINBASE_BELOW_MINIMUM_DESTINATION_BALANCE);
     }
     
-    public RuleAllowance_DepositFiat(UUID _uuid, FiatCurrencyType _fiatCurrencyType, boolean _executeImmediately, double _amountPerDayFiat)
+    public RuleAllowance_WithdrawCoinToCoinbaseBelowMinimumDestinationBalance(UUID _uuid, CoinCurrencyType _coinCurrencyType, FiatCurrencyType _fiatCurrencyType, boolean _executeImmediately, double _amountPerDayFiat)
     {
-        super(_uuid, RuleType.ALLOWANCE, ActionType.ALLOWANCE_DEPOSIT_FIAT);
-        fiatCurrencyType = _fiatCurrencyType;
+        super(_uuid, RuleType.ALLOWANCE, ActionType.ALLOWANCE_WITHDRAW_COIN_TO_COINBASE_BELOW_MINIMUM_DESTINATION_BALANCE);
+        coinCurrencyType = _coinCurrencyType;
+        fiatCurrencyType = _fiatCurrencyType;        
         amountPerDayFiat = _amountPerDayFiat;
         
         if(_executeImmediately)
@@ -54,9 +57,9 @@ public class RuleAllowance_DepositFiat extends Rule
         CryptomoneyAutotask.logProv.LogMessage("CREATED actiontype: " + getActionType().toString() + " currentAmount: " + getAssociatedAllowance().getAllowance().doubleValue());
     }
     
-    private AllowanceFiat getAssociatedAllowance()
+    private AllowanceCoinFiat getAssociatedAllowance()
     {
-        return this.account.getAllowanceFiat(AllowanceType.Deposit, fiatCurrencyType, this.uuid);
+        return this.account.getAllowanceCoinFiat(AllowanceType.WithdrawCoinToCoinbase, coinCurrencyType, fiatCurrencyType, this.uuid);
     }
     
     @Override
@@ -68,10 +71,10 @@ public class RuleAllowance_DepositFiat extends Rule
         double intervalsPerDay =  msPerDay / CryptomoneyAutotask.iterationIntervalMS;
         
         double amountPerIntervalFiat = amountPerDayFiat / intervalsPerDay;
-        
+        //CryptomoneyAutotask.logProv.LogMessage("actiontype: " + getActionType().toString() + " amount/interval: " + amountPerIntervalUSD);      
         
         getAssociatedAllowance().addToAllowance(BigDecimal.valueOf(amountPerIntervalFiat));
-        CryptomoneyAutotask.logProv.LogMessage("STATUS actiontype: " + getActionType().toString() + "new AllowanceDepositFiat: " + getAssociatedAllowance().getAllowance().setScale(2, RoundingMode.FLOOR));
+        CryptomoneyAutotask.logProv.LogMessage("STATUS actiontype: " + getActionType().toString() + " new allowanceWithdrawCoinToCoinbaseInFiat: " + getAssociatedAllowance().getAllowance().setScale(2, RoundingMode.FLOOR));      
      
         //CryptomoneyAutotask.logProv.LogMessage("");
     }
@@ -80,7 +83,8 @@ public class RuleAllowance_DepositFiat extends Rule
     public String getHelpString()
     {
         return this.getRuleType() + " " + this.getActionType()                 
-            + " fiatCurrencyType:"+ this.fiatCurrencyType
+            + " coinCurrencyType:"+ this.coinCurrencyType
+            + " fiatCurrencyType:"+ this.fiatCurrencyType  
                 +  " amountPerDayFiat:" + amountPerDayFiat;
     }
 }

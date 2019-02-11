@@ -38,31 +38,31 @@ public class SharedFunctions
         return intervalsPerDay;
     }
     
-    public static double GenerateRandomNumberFrom1to100()
+    public static int GenerateRandomInt(int min, int max)
     {
         Random random = new Random();
         
-        int num = random.nextInt(100)+1;
+        int num = random.nextInt(max-min+1)+min;
         return num;
     }
     
-    public static boolean RollDie(double percentChangeBetween0and1, ILoggingProvider logProv)
+    public static boolean RollDie(double percentChanceBetween0and1, ILoggingProvider logProv)
     {
-        Random random = new Random();
-        
-        int num = random.nextInt(100)+1;
+        /*int num = GenerateRandomInt(1,1000);
     
-        double numPct = num/100.0;
+        double numPct = num/1000.0;
+        */
         
+        double random = Math.random();
         
-        if(numPct <= percentChangeBetween0and1)
+        if(random <= percentChanceBetween0and1)
         {
-            logProv.LogMessage("rolldie: " + numPct + "/" + percentChangeBetween0and1 + "=true");
+            logProv.LogMessage("rolldie: " + random + "/" + percentChanceBetween0and1 + "=true");
             return true;
         }
         else
         {
-            logProv.LogMessage("rolldie: " + numPct + "/" + percentChangeBetween0and1 + "=false");
+            logProv.LogMessage("rolldie: " + random + "/" + percentChanceBetween0and1 + "=false");
             return false;
         }
         

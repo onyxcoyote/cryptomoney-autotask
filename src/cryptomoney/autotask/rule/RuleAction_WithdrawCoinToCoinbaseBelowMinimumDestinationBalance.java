@@ -37,29 +37,31 @@ import java.math.RoundingMode;
  *
  * @author onyxcoyote <no-reply@onyxcoyote.com>
  */
-public class RuleAction_WithdrawCoinToCoinbase extends Rule
+public class RuleAction_WithdrawCoinToCoinbaseBelowMinimumDestinationBalance extends Rule
 {
     private CoinCurrencyType coinCurrencyType;
     private FiatCurrencyType fiatCurrencyType;
     private double maximumAvgOccurrencesPerDay;
     private double minimumFiatQuantityThreshold;
     private double maximumCurrencyQuantity;
+    private double minimumDestinationBalanceValueInFiat;
     
     private int executionCount = 0; //if we set this to 999999 then it would execute right away upon running program (maybe)
     
-    public RuleAction_WithdrawCoinToCoinbase()
+    public RuleAction_WithdrawCoinToCoinbaseBelowMinimumDestinationBalance()
     {
-        super(null, RuleType.ACTION, ActionType.ACTION_WITHDRAW_COIN_TO_COINBASE);
+        super(null, RuleType.ACTION, ActionType.ACTION_WITHDRAW_COIN_TO_COINBASE_BELOW_MINIMUM_DESTINATION_BALANCE);
     }
     
-    public RuleAction_WithdrawCoinToCoinbase(UUID _uuid, CoinCurrencyType _coinCurrencyType, FiatCurrencyType _fiatCurrencyType, boolean _executeImmediately, double _maximumAvgOccurrencesPerDay, double _minimumCurrencyQuantityThreshold, double _maximumCurrencyQuantity)
+    public RuleAction_WithdrawCoinToCoinbaseBelowMinimumDestinationBalance(UUID _uuid, CoinCurrencyType _coinCurrencyType, FiatCurrencyType _fiatCurrencyType, boolean _executeImmediately, double _maximumAvgOccurrencesPerDay, double _minimumCurrencyQuantityThreshold, double _maximumCurrencyQuantity, double _minimumDestinationBalanceValueInFiat)
     {
-        super(_uuid, RuleType.ACTION, ActionType.ACTION_WITHDRAW_COIN_TO_COINBASE);
+        super(_uuid, RuleType.ACTION, ActionType.ACTION_WITHDRAW_COIN_TO_COINBASE_BELOW_MINIMUM_DESTINATION_BALANCE);
         coinCurrencyType = _coinCurrencyType;
         fiatCurrencyType = _fiatCurrencyType;
         maximumAvgOccurrencesPerDay = _maximumAvgOccurrencesPerDay;
         minimumFiatQuantityThreshold = _minimumCurrencyQuantityThreshold;
         maximumCurrencyQuantity = _maximumCurrencyQuantity;
+        minimumDestinationBalanceValueInFiat = _minimumDestinationBalanceValueInFiat;
         
         if(_executeImmediately)
         {
@@ -87,7 +89,6 @@ public class RuleAction_WithdrawCoinToCoinbase extends Rule
         
         executionCount++;
 
-        
         
         if(getAssociatedAllowance().getAllowance().doubleValue() < minimumFiatQuantityThreshold)
         {
@@ -167,23 +168,33 @@ public class RuleAction_WithdrawCoinToCoinbase extends Rule
                     CryptomoneyAutotask.logMultiplexer.LogMessage("ERROR coinbase wallet "+this.coinCurrencyType.toString()+" account not found");
                     System.exit(1);
                 }
-
-                //BigDecimal bdBTCAmountToWithdraw = BigDecimal.valueOf(btcToWithdraw).setScale(8, RoundingMode.HALF_EVEN);
-                BigDecimal estimatedFiatAmountOfWithdrawal = coinQuantityToWithdraw.multiply(coinPrice).setScale(2, RoundingMode.UP);
                 
-                PaymentResponse response = CryptomoneyAutotask.withdrawalsService.makeWithdrawalToCoinbase(coinQuantityToWithdraw, this.coinCurrencyType.toString(), coinCoinbaseAccount_Id); //API CALL
-
-                String logString = "Requested "+this.coinCurrencyType.toString()+" withdrawal to coinbase, response: " + response.getId() + " " + response.getCurrency() + " " + response.getAmount().doubleValue() + " " + response.getPayout_at() + " estimated "+this.fiatCurrencyType.toString()+" value: " + estimatedFiatAmountOfWithdrawal;
-                CryptomoneyAutotask.logMultiplexer.LogMessage(logString);
-
-
-                getAssociatedAllowance().addToAllowance(estimatedFiatAmountOfWithdrawal.negate());
-
-                //purge any extra allowance
-                if(getAssociatedAllowance().getAllowance().doubleValue() > 0)
+                CoinbaseAccount acct = this.account.getCoinbaseRegularAccount_ById(coinCoinbaseAccount_Id);
+                BigDecimal accountCoinValueInFiat = acct.getBalance().multiply(coinPrice);
+                
+                if(accountCoinValueInFiat.doubleValue() < minimumDestinationBalanceValueInFiat)
                 {
-                    CryptomoneyAutotask.logMultiplexer.LogMessage("purging "+this.coinCurrencyType.toString()+" withdraw allowance " + getAssociatedAllowance().getAllowance());
-                    getAssociatedAllowance().resetAllowance();
+                    //BigDecimal bdBTCAmountToWithdraw = BigDecimal.valueOf(btcToWithdraw).setScale(8, RoundingMode.HALF_EVEN);
+                    BigDecimal estimatedFiatAmountOfWithdrawal = coinQuantityToWithdraw.multiply(coinPrice).setScale(2, RoundingMode.UP);
+
+                    PaymentResponse response = CryptomoneyAutotask.withdrawalsService.makeWithdrawalToCoinbase(coinQuantityToWithdraw, this.coinCurrencyType.toString(), coinCoinbaseAccount_Id); //API CALL
+
+                    String logString = "Requested "+this.coinCurrencyType.toString()+" withdrawal to coinbase (below minimum balance), response: " + response.getId() + " " + response.getCurrency() + " " + response.getAmount().doubleValue() + " " + response.getPayout_at() + " estimated "+this.fiatCurrencyType.toString()+" value: " + estimatedFiatAmountOfWithdrawal;
+                    CryptomoneyAutotask.logMultiplexer.LogMessage(logString);
+
+
+                    getAssociatedAllowance().addToAllowance(estimatedFiatAmountOfWithdrawal.negate());
+
+                    //purge any extra allowance
+                    if(getAssociatedAllowance().getAllowance().doubleValue() > 0)
+                    {
+                        CryptomoneyAutotask.logMultiplexer.LogMessage("purging "+this.coinCurrencyType.toString()+" withdraw allowance " + getAssociatedAllowance().getAllowance());
+                        getAssociatedAllowance().resetAllowance();
+                    }
+                }
+                else
+                {
+                    CryptomoneyAutotask.logProv.LogMessage("coinbase destination account balance is not less than minimumDestinationBalanceValueInFiat " + accountCoinValueInFiat.doubleValue());    
                 }
             }
             else

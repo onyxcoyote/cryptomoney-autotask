@@ -75,35 +75,39 @@ public class ExchangeAccount
         
     }
     
-    public AllowanceFiat getAllowanceFiat(AllowanceType _allowanceType, FiatCurrencyType _fiatCurrencyType)
+    public AllowanceFiat getAllowanceFiat(AllowanceType _allowanceType, FiatCurrencyType _fiatCurrencyType, UUID _uuid)
     {
         for(AllowanceFiat allowance : allowancesFiat)
         {
             if(allowance.getAllowanceType().equals(_allowanceType) && 
-                    allowance.getFiatCurrencyType().equals(_fiatCurrencyType))
+                    allowance.getFiatCurrencyType().equals(_fiatCurrencyType) &&
+                    allowance.getUUID().equals(_uuid)
+                    )
             {
                 return allowance;
             }
         }
         
-        AllowanceFiat allowance = new AllowanceFiat(_allowanceType, _fiatCurrencyType);
+        AllowanceFiat allowance = new AllowanceFiat(_allowanceType, _fiatCurrencyType, _uuid);
         allowancesFiat.add(allowance);
         return allowance;
     }
     
-    public AllowanceCoinFiat getAllowanceCoinFiat(AllowanceType _allowanceType, CoinCurrencyType _coinCurrencyType, FiatCurrencyType _fiatCurrencyType)
+    public AllowanceCoinFiat getAllowanceCoinFiat(AllowanceType _allowanceType, CoinCurrencyType _coinCurrencyType, FiatCurrencyType _fiatCurrencyType, UUID _uuid)
     {
         for(AllowanceCoinFiat allowance : allowancesCoinFiat)
         {
             if(allowance.getAllowanceType().equals(_allowanceType) && 
                     allowance.getFiatCurrencyType().equals(_fiatCurrencyType) && 
-                    allowance.getCoinCurrencyType().equals(_coinCurrencyType))
+                    allowance.getCoinCurrencyType().equals(_coinCurrencyType)&&
+                    allowance.getUUID().equals(_uuid)
+                )
             {
                 return allowance;
             }
         }
         
-        AllowanceCoinFiat allowance = new AllowanceCoinFiat(_allowanceType, _coinCurrencyType, _fiatCurrencyType);
+        AllowanceCoinFiat allowance = new AllowanceCoinFiat(_allowanceType, _coinCurrencyType, _fiatCurrencyType, _uuid);
         allowancesCoinFiat.add(allowance);
         return allowance;
     }
@@ -129,7 +133,6 @@ public class ExchangeAccount
     /**
      * API CALL
      * Get the coinbase account for a specific accountID
-     * This is needed for informational purposes only.  In most cases, it's only necessary to get the account_id.
      * @return 
      */
     public CoinbaseAccount getCoinbaseRegularAccount_ById(String _accountId)
@@ -379,7 +382,7 @@ public class ExchangeAccount
     /**
      * CALLS API
      */
-    public boolean ProcessBuyOrders(CoinCurrencyType _coinCurrencyType, FiatCurrencyType _fiatCurrencyType, boolean cancelAnyOpen) //TODO: change this to only look at buy orders
+    public boolean ProcessBuyOrders(UUID _ruleUUID, CoinCurrencyType _coinCurrencyType, FiatCurrencyType _fiatCurrencyType, boolean cancelAnyOpen) //TODO: change this to only look at buy orders
     {
         CryptomoneyAutotask.logProv.LogMessage("ProcessBuyOrders cancelOpen? " + cancelAnyOpen);
         boolean madeChanges = false;
@@ -536,7 +539,7 @@ public class ExchangeAccount
                         BigDecimal missingOrderPrice = BigDecimal.valueOf(Double.valueOf(missingOrder.getPrice()));
                         BigDecimal missingOrderCoinAmount = BigDecimal.valueOf(Double.valueOf(missingOrder.getSize()));
                         BigDecimal fiatEquivalentValueNotPurchased = missingOrderCoinAmount.multiply(missingOrderPrice);
-                        this.getAllowanceCoinFiat(AllowanceType.Buy, _coinCurrencyType, _fiatCurrencyType).addToAllowance(fiatEquivalentValueNotPurchased);
+                        this.getAllowanceCoinFiat(AllowanceType.Buy, _coinCurrencyType, _fiatCurrencyType, _ruleUUID).addToAllowance(fiatEquivalentValueNotPurchased);
                         madeChanges = true;
                         lsoc.library.utilities.Sleep.Sleep(200);
                     }
@@ -555,7 +558,7 @@ public class ExchangeAccount
                             if(missedSize > 0)
                             {
                                 //add it back to allowance
-                                this.getAllowanceCoinFiat(AllowanceType.Buy, _coinCurrencyType, _fiatCurrencyType).addToAllowance(BigDecimal.valueOf(missedSize));
+                                this.getAllowanceCoinFiat(AllowanceType.Buy, _coinCurrencyType, _fiatCurrencyType, _ruleUUID).addToAllowance(BigDecimal.valueOf(missedSize));
                                 madeChanges = true;
                             }
 
@@ -576,7 +579,7 @@ public class ExchangeAccount
         return madeChanges;
     }
     
-    public Order buyCoinImmediate(BigDecimal coinAmountToPurchase, CoinCurrencyType _coinCurrencyType, FiatCurrencyType _fiatCurrencyType)
+    public Order buyCoinImmediate(UUID _ruleUUID, BigDecimal coinAmountToPurchase, CoinCurrencyType _coinCurrencyType, FiatCurrencyType _fiatCurrencyType)
     {
         if(this.exchangeType == ExchangeType.CoinbasePro)
         {
@@ -617,7 +620,7 @@ public class ExchangeAccount
             
             //wait a short while then check order status again
             lsoc.library.utilities.Sleep.Sleep(200);
-            ProcessBuyOrders(_coinCurrencyType, _fiatCurrencyType, false);
+            ProcessBuyOrders(_ruleUUID, _coinCurrencyType, _fiatCurrencyType, false);
             
             return order;
         }
@@ -634,7 +637,7 @@ public class ExchangeAccount
     /**
      * CALLS API
      */
-    public Order buyCoinPostOnly(BigDecimal coinAmountToPurchase, CoinCurrencyType _coinCurrencyType, FiatCurrencyType _fiatCurrencyType)
+    public Order buyCoinPostOnly(UUID _ruleUUID, BigDecimal coinAmountToPurchase, CoinCurrencyType _coinCurrencyType, FiatCurrencyType _fiatCurrencyType)
     {
         if(this.exchangeType == ExchangeType.CoinbasePro)
         {
@@ -689,7 +692,7 @@ public class ExchangeAccount
             
             //wait a short while then check order status again
             lsoc.library.utilities.Sleep.Sleep(200);
-            ProcessBuyOrders(_coinCurrencyType, _fiatCurrencyType, false);
+            ProcessBuyOrders(_ruleUUID, _coinCurrencyType, _fiatCurrencyType, false);
             
             return order;
         }

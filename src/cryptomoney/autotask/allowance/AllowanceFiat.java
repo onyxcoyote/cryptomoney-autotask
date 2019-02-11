@@ -17,6 +17,8 @@
 package cryptomoney.autotask.allowance;
 
 import cryptomoney.autotask.currency.*;
+import java.util.UUID;
+
 
 /**
  *
@@ -25,15 +27,22 @@ import cryptomoney.autotask.currency.*;
 public class AllowanceFiat extends Allowance
 {
     FiatCurrencyType fiatCurrencyType;
+    UUID uuid;
     
-    public AllowanceFiat(AllowanceType _allowanceType, FiatCurrencyType _fiatCurrencyType)
+    public AllowanceFiat(AllowanceType _allowanceType, FiatCurrencyType _fiatCurrencyType, UUID _uuid)
     {
         super(_allowanceType);
         fiatCurrencyType = _fiatCurrencyType;
+        uuid = _uuid;
     }
     
     public FiatCurrencyType getFiatCurrencyType()
     {
         return this.fiatCurrencyType;
+    }
+    
+    public UUID getUUID()
+    {
+        return this.uuid;
     }
 }

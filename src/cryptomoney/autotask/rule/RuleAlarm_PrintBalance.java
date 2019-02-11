@@ -25,6 +25,8 @@ import com.coinbase.exchange.api.payments.PaymentType;
 import cryptomoney.autotask.CryptomoneyAutotask;
 import cryptomoney.autotask.exchangeaccount.*;
 import cryptomoney.autotask.functions.SharedFunctions;
+
+import java.util.List;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 
@@ -41,7 +43,7 @@ public class RuleAlarm_PrintBalance extends Rule
     
     public RuleAlarm_PrintBalance()
     {
-        super(RuleType.ALARM, ActionType.ALARM_PRINT_BALANCE);
+        super(null, RuleType.ALARM, ActionType.ALARM_PRINT_BALANCE);
     }
     
     /**
@@ -50,7 +52,7 @@ public class RuleAlarm_PrintBalance extends Rule
      */
     public RuleAlarm_PrintBalance(boolean _executeImmediately, double _maximumAvgOccurrencesPerDay)
     {
-        super(RuleType.ALARM, ActionType.ALARM_PRINT_BALANCE);
+        super(null, RuleType.ALARM, ActionType.ALARM_PRINT_BALANCE);
         maximumAvgOccurrencesPerDay = _maximumAvgOccurrencesPerDay;
         
         if(_executeImmediately)

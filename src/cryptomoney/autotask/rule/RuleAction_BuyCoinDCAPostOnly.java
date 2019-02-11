@@ -30,6 +30,7 @@ import cryptomoney.autotask.exchangeaccount.WalletAccountCurrency;
 import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.math.RoundingMode;
+import java.util.UUID;
 
 /**
  * Dollar cost averaging coinbase pro using post-only method (most complicated but 0% fee)
@@ -48,7 +49,7 @@ public class RuleAction_BuyCoinDCAPostOnly extends Rule
     
     public RuleAction_BuyCoinDCAPostOnly()
     {
-        super(RuleType.ACTION, ActionType.ACTION_BUY_COIN_DCA_POSTONLY);
+        super(null, RuleType.ACTION, ActionType.ACTION_BUY_COIN_DCA_POSTONLY);
     }
     
     /**
@@ -63,9 +64,9 @@ public class RuleAction_BuyCoinDCAPostOnly extends Rule
      * @param _maximumQuantityCoin
      * @param _randomChanceToProceed  decimal between 0 and 1, e.g. 25% change is 0.25.  This only delays it until the next INTERVAL (e.g. 5 seconds), not even next execution.  Does not reset any other timers.
      */
-    public RuleAction_BuyCoinDCAPostOnly(CoinCurrencyType _coinCurrencyType, FiatCurrencyType _fiatCurrencyType, boolean _executeImmediately, double _maximumAvgOccurrencesPerDay, double _minimumQuantityBuyCurrency, double _minimumQuantityCoinThreshold, double _maximumQuantityCoin, double _randomChanceToProceed)
+    public RuleAction_BuyCoinDCAPostOnly(UUID _uuid, CoinCurrencyType _coinCurrencyType, FiatCurrencyType _fiatCurrencyType, boolean _executeImmediately, double _maximumAvgOccurrencesPerDay, double _minimumQuantityBuyCurrency, double _minimumQuantityCoinThreshold, double _maximumQuantityCoin, double _randomChanceToProceed)
     {
-        super(RuleType.ACTION, ActionType.ACTION_BUY_COIN_DCA_POSTONLY);
+        super(_uuid, RuleType.ACTION, ActionType.ACTION_BUY_COIN_DCA_POSTONLY);
         coinCurrencyType = _coinCurrencyType;
         fiatCurrencyType = _fiatCurrencyType;
         maximumAvgOccurrencesPerDay = _maximumAvgOccurrencesPerDay;
@@ -89,7 +90,7 @@ public class RuleAction_BuyCoinDCAPostOnly extends Rule
     
     private AllowanceCoinFiat getAssociatedAllowance()
     {
-        return this.account.getAllowanceCoinFiat(AllowanceType.Buy, coinCurrencyType, fiatCurrencyType);
+        return this.account.getAllowanceCoinFiat(AllowanceType.Buy, coinCurrencyType, fiatCurrencyType, this.uuid);
     }
     
     @Override
@@ -162,7 +163,7 @@ public class RuleAction_BuyCoinDCAPostOnly extends Rule
             
             //todo: do this as a separate action, maybe like a separate rule
             boolean cancelAnyOpenOrders = true;
-            boolean changedAllowance = this.account.ProcessBuyOrders(coinCurrencyType, fiatCurrencyType, cancelAnyOpenOrders); //API call
+            boolean changedAllowance = this.account.ProcessBuyOrders(this.uuid, coinCurrencyType, fiatCurrencyType, cancelAnyOpenOrders); //API call
             if(changedAllowance) 
             {
                 BigDecimal allowance = getAssociatedAllowance().getAllowance().setScale(10, RoundingMode.HALF_EVEN);
@@ -195,13 +196,13 @@ public class RuleAction_BuyCoinDCAPostOnly extends Rule
             {
                 //EXECUTE BUY - POST (does not execute immediately
                 CryptomoneyAutotask.logProv.LogMessage("coin amount purchase triggered (post-only): " + CryptomoneyAutotask.coinFormat.format(coinAmountToPurchase) + "/" + this.minimumQuantityCoinThreshold);      
-                order = this.account.buyCoinPostOnly(coinAmountToPurchase, coinCurrencyType, fiatCurrencyType); //API call
+                order = this.account.buyCoinPostOnly(this.uuid, coinAmountToPurchase, coinCurrencyType, fiatCurrencyType); //API call
             }
             else
             {
                 //DESPARATE BUY - BUY IMMEDIATELY (within reason)
                 CryptomoneyAutotask.logProv.LogMessage("coin amount purchase triggered (immediate): " + CryptomoneyAutotask.coinFormat.format(coinAmountToPurchase) + "/" + this.minimumQuantityCoinThreshold);      
-                order = this.account.buyCoinImmediate(coinAmountToPurchase, coinCurrencyType, fiatCurrencyType); //API call                
+                order = this.account.buyCoinImmediate(this.uuid, coinAmountToPurchase, coinCurrencyType, fiatCurrencyType); //API call                
             }
             
             if(order != null)

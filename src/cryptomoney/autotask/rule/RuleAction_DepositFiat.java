@@ -24,9 +24,11 @@ import cryptomoney.autotask.allowance.*;
 import cryptomoney.autotask.currency.FiatCurrencyType;
 import cryptomoney.autotask.exchangeaccount.WalletAccountCurrency;
 import cryptomoney.autotask.functions.SharedFunctions;
-import java.util.List;
+
+import java.util.UUID;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+
 
 /**
  *
@@ -43,12 +45,12 @@ public class RuleAction_DepositFiat extends Rule
     
     public RuleAction_DepositFiat()
     {
-        super(RuleType.ACTION, ActionType.ACTION_DEPOSIT_FIAT);
+        super(null, RuleType.ACTION, ActionType.ACTION_DEPOSIT_FIAT);
     }
     
-    public RuleAction_DepositFiat(FiatCurrencyType _fiatCurrencyType, boolean _executeImmediately, double _maximumAvgOccurrencesPerDay, double _minimumFiatQuantityThreshold, double _maximumFiatQuantity)
+    public RuleAction_DepositFiat(UUID _uuid, FiatCurrencyType _fiatCurrencyType, boolean _executeImmediately, double _maximumAvgOccurrencesPerDay, double _minimumFiatQuantityThreshold, double _maximumFiatQuantity)
     {
-        super(RuleType.ACTION, ActionType.ACTION_DEPOSIT_FIAT);
+        super(_uuid, RuleType.ACTION, ActionType.ACTION_DEPOSIT_FIAT);
         fiatCurrencyType = _fiatCurrencyType;
         maximumAvgOccurrencesPerDay = _maximumAvgOccurrencesPerDay;
         minimumFiatQuantityThreshold = _minimumFiatQuantityThreshold;
@@ -62,7 +64,7 @@ public class RuleAction_DepositFiat extends Rule
     
     private AllowanceFiat getAssociatedAllowance()
     {
-        return this.account.getAllowanceFiat(AllowanceType.Deposit, fiatCurrencyType);
+        return this.account.getAllowanceFiat(AllowanceType.Deposit, fiatCurrencyType, this.uuid);
     }
     
     private double getNumberOfExecutionsBeforeExecutingOnce()

@@ -21,8 +21,11 @@ import cryptomoney.autotask.allowance.AllowanceCoinFiat;
 import cryptomoney.autotask.allowance.AllowanceType;
 import cryptomoney.autotask.currency.CoinCurrencyType;
 import cryptomoney.autotask.currency.FiatCurrencyType;
+
+import java.util.List;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.util.UUID;
 
 /**
  *
@@ -36,12 +39,12 @@ public class RuleAllowance_BuyCoin extends Rule
     
     public RuleAllowance_BuyCoin()
     {
-        super(RuleType.ALLOWANCE, ActionType.ALLOWANCE_BUY_COIN);
+        super(null, RuleType.ALLOWANCE, ActionType.ALLOWANCE_BUY_COIN);
     }
     
-    public RuleAllowance_BuyCoin(CoinCurrencyType _coinCurrencyType, FiatCurrencyType _fiatCurrencyType, boolean _executeImmediately, double _amountPerDayFiat)
+    public RuleAllowance_BuyCoin(UUID _uuid, CoinCurrencyType _coinCurrencyType, FiatCurrencyType _fiatCurrencyType, boolean _executeImmediately, double _amountPerDayFiat)
     {
-        super(RuleType.ALLOWANCE, ActionType.ALLOWANCE_BUY_COIN);
+        super(_uuid, RuleType.ALLOWANCE, ActionType.ALLOWANCE_BUY_COIN);
         coinCurrencyType = _coinCurrencyType;
         fiatCurrencyType = _fiatCurrencyType;
         amountPerDayFiat = _amountPerDayFiat;
@@ -56,7 +59,7 @@ public class RuleAllowance_BuyCoin extends Rule
     
     private AllowanceCoinFiat getAssociatedAllowance()
     {
-        return this.account.getAllowanceCoinFiat(AllowanceType.Buy, coinCurrencyType, fiatCurrencyType);
+        return this.account.getAllowanceCoinFiat(AllowanceType.Buy, coinCurrencyType, fiatCurrencyType, this.uuid);
     }
     
     @Override

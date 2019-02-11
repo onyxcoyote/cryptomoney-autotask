@@ -25,5 +25,6 @@ public enum AllowanceType
     Buy,
     Sell,
     WithdrawCoinToCoinbase,
+    WithdrawCoinToCrypto,
     Deposit
 }

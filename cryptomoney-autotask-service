@@ -3,7 +3,7 @@
 # description: startup script for cryptomoney-autotask.  THIS FILE IS PUBLIC DOMAIN.
 SERVICE_NAME=cryptomoney-autotask-service
 PATH_TO_SCRIPT=/srv/cryptomoney-autotask/runcryptomoneyautotask.sh
-PID_PATH_NAME=/tmp/cryptomoney-autotask-pid
+PID_PATH_NAME=/srv/tmp/cryptomoney-autotask-pid
 
 echo "checking pid file"
 if [ -f $PID_PATH_NAME ]; then

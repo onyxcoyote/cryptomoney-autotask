@@ -17,6 +17,7 @@
 package cryptomoney.autotask.allowance;
 
 import cryptomoney.autotask.currency.*;
+import java.util.UUID;
 
 /**
  *
@@ -26,10 +27,11 @@ public class AllowanceCoinFiat extends AllowanceFiat
 {
     private CoinCurrencyType coinCurrencyType;
     
-    public AllowanceCoinFiat(AllowanceType _allowanceType, CoinCurrencyType _coinCurrencyType, FiatCurrencyType _fiatCurrencyType)
+    public AllowanceCoinFiat(AllowanceType _allowanceType, CoinCurrencyType _coinCurrencyType, FiatCurrencyType _fiatCurrencyType, UUID _uuid)
     {
-        super(_allowanceType, _fiatCurrencyType);
+        super(_allowanceType, _fiatCurrencyType, _uuid);
         coinCurrencyType = _coinCurrencyType;
+        
     }
     
     

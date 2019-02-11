@@ -21,8 +21,11 @@ import cryptomoney.autotask.allowance.AllowanceCoinFiat;
 import cryptomoney.autotask.allowance.AllowanceType;
 import cryptomoney.autotask.currency.CoinCurrencyType;
 import cryptomoney.autotask.currency.FiatCurrencyType;
+
+import java.util.List;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.util.UUID;
 
 /**
  *
@@ -36,12 +39,12 @@ public class RuleAllowance_WithdrawCoinToCoinbase extends Rule
     
     public RuleAllowance_WithdrawCoinToCoinbase()
     {
-        super(RuleType.ALLOWANCE, ActionType.ALLOWANCE_WITHDRAW_COIN_TO_COINBASE);
+        super(null, RuleType.ALLOWANCE, ActionType.ALLOWANCE_WITHDRAW_COIN_TO_COINBASE);
     }
     
-    public RuleAllowance_WithdrawCoinToCoinbase(CoinCurrencyType _coinCurrencyType, FiatCurrencyType _fiatCurrencyType, boolean _executeImmediately, double _amountPerDayFiat)
+    public RuleAllowance_WithdrawCoinToCoinbase(UUID _uuid, CoinCurrencyType _coinCurrencyType, FiatCurrencyType _fiatCurrencyType, boolean _executeImmediately, double _amountPerDayFiat)
     {
-        super(RuleType.ALLOWANCE, ActionType.ALLOWANCE_WITHDRAW_COIN_TO_COINBASE);
+        super(_uuid, RuleType.ALLOWANCE, ActionType.ALLOWANCE_WITHDRAW_COIN_TO_COINBASE);
         coinCurrencyType = _coinCurrencyType;
         fiatCurrencyType = _fiatCurrencyType;        
         amountPerDayFiat = _amountPerDayFiat;
@@ -56,7 +59,7 @@ public class RuleAllowance_WithdrawCoinToCoinbase extends Rule
     
     private AllowanceCoinFiat getAssociatedAllowance()
     {
-        return this.account.getAllowanceCoinFiat(AllowanceType.WithdrawCoinToCoinbase, coinCurrencyType, fiatCurrencyType);
+        return this.account.getAllowanceCoinFiat(AllowanceType.WithdrawCoinToCoinbase, coinCurrencyType, fiatCurrencyType, this.uuid);
     }
     
     @Override

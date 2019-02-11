@@ -18,7 +18,7 @@ package cryptomoney.autotask;
 
 import java.util.ArrayList;
 
-import com.coinbase.exchange.api.orders.OrderService;
+//import com.coinbase.exchange.api.orders.OrderService;
 import com.coinbase.exchange.api.accounts.Account;
 
 import cryptomoney.autotask.exchangeaccount.ExchangeAccount;
@@ -29,6 +29,7 @@ import cryptomoney.autotask.rule.RuleAction_BuyCoinDCAPostOnly;
 import cryptomoney.autotask.rule.RuleAllowance_WithdrawCoinToCoinbase;
 import cryptomoney.autotask.rule.RuleType;
 import cryptomoney.autotask.rule.*;
+import java.util.UUID;
 
 /**
  *
@@ -119,13 +120,17 @@ public class Autotask
     {
         availableRules.add(new RuleAction_BuyCoinDCAPostOnly());
         availableRules.add(new RuleAction_DepositFiat());
+        availableRules.add(new RuleAction_WithdrawCoinToCoinbaseBelowMinimumDestinationBalance());
         availableRules.add(new RuleAction_WithdrawCoinToCoinbase());
+        availableRules.add(new RuleAction_WithdrawCoinToCrypto());
         
         availableRules.add(new RuleAction_ProcessCoinBuyPostOrders());
         
         availableRules.add(new RuleAllowance_BuyCoin());
         availableRules.add(new RuleAllowance_DepositFiat());
         availableRules.add(new RuleAllowance_WithdrawCoinToCoinbase());
+        availableRules.add(new RuleAllowance_WithdrawCoinToCoinbaseBelowMinimumDestinationBalance());
+        availableRules.add(new RuleAllowance_WithdrawCoinToCrypto());
         
         availableRules.add(new RuleAlarm_PrintBalance());
               
@@ -137,9 +142,8 @@ public class Autotask
     
     private void LoadRules() throws java.io.IOException, Exception
     {
-        //todo: use BigDecimal instead of double for calculations
-        
-        
+        //ALARM RULES
+        //<editor-fold defaultstate="collapsed" desc="ALARM RULES">
         //ALARM RULES
         boolean ALARM_PRINT_BALANCE__enable = Boolean.parseBoolean(CryptomoneyAutotask.config.getConfigString("ALARM_PRINT_BALANCE__enable"));
         if(ALARM_PRINT_BALANCE__enable)
@@ -154,11 +158,10 @@ public class Autotask
                 ALARM_PRINT_BALANCE__maximumAvgOccurrencesPerDay);
             rules.add(alarm_printBalance);
         }
-
-        
+        //</editor-fold>
       
         //ACTION RULES
-
+        //<editor-fold defaultstate="collapsed" desc="ACTION_BUY_COIN_DCA_POSTONLY_">       
         //account 1 - ACTION buy (w/ BUYMETHOD) around X bitcoin per day using USD
         for(int i=1;i<=20;i++)
         {        
@@ -173,6 +176,7 @@ public class Autotask
             boolean ACTION_BUY_COIN_DCA_POSTONLY__enable = Boolean.parseBoolean(CryptomoneyAutotask.config.getConfigString(fullPrefix+"enable"));        
             if(ACTION_BUY_COIN_DCA_POSTONLY__enable)
             {
+                UUID _uuid = UUID.randomUUID();
                 CoinCurrencyType coinCurrencyType = CoinCurrencyType.valueOf(CryptomoneyAutotask.config.getConfigString(fullPrefix+"coin_currency_type"));
                 FiatCurrencyType fiatCurrencyType = FiatCurrencyType.valueOf(CryptomoneyAutotask.config.getConfigString(fullPrefix+"fiat_currency_type"));
               
@@ -193,6 +197,7 @@ public class Autotask
                     throw new Exception(fullPrefix+"amountPerDayUS exceeds hard-coded safe maximum");
                 }
                 RuleAllowance_BuyCoin allowance_buyCoin = new RuleAllowance_BuyCoin(
+                        _uuid,
                         coinCurrencyType, 
                         fiatCurrencyType, 
                         executeImmediately, 
@@ -206,6 +211,7 @@ public class Autotask
                     throw new Exception(fullPrefix+"PROCESS_COIN_BUY_POST_ORDERS__maximumAvgOccurrencesPerDay exceeds hard-coded safe maximum");
                 }            
                 RuleAction_ProcessCoinBuyPostOrders action_processOrders = new RuleAction_ProcessCoinBuyPostOrders(
+                        _uuid,
                         coinCurrencyType, 
                         fiatCurrencyType, 
                         executeImmediately, 
@@ -238,12 +244,13 @@ public class Autotask
                 {
                     throw new Exception(fullPrefix+"maximumQuantityCoin exceeds hard-coded safe maximum");
                 }      
-                if(ACTION_BUY_COIN_DCA_POSTONLY__randomChanceToProceed < 0.01 || ACTION_BUY_COIN_DCA_POSTONLY__randomChanceToProceed > 1.00)
+                if(ACTION_BUY_COIN_DCA_POSTONLY__randomChanceToProceed < 0.0001 || ACTION_BUY_COIN_DCA_POSTONLY__randomChanceToProceed > 1.00)
                 {
                     throw new Exception(fullPrefix+"randomChanceToProceed exceeds hard-coded safe maximum");
                 }          
 
                 RuleAction_BuyCoinDCAPostOnly action_buy = new RuleAction_BuyCoinDCAPostOnly(
+                        _uuid,
                         coinCurrencyType,
                         fiatCurrencyType,
                         executeImmediately,
@@ -259,8 +266,9 @@ public class Autotask
                 CryptomoneyAutotask.logProv.LogMessage("rule disabled: " + fullPrefix);
             }            
         }
+        //</editor-fold>
         
-        
+        //<editor-fold defaultstate="collapsed" desc="ACTION_WITHDRAW_COIN_TO_COINBASE_">
         //account 1 - ACTION withdraw X coin (from coinbase pro) to coinbase account 
         for(int i=1;i<=20;i++)
         {
@@ -275,6 +283,7 @@ public class Autotask
             boolean ACTION_WITHDRAW_COIN_TO_COINBASE__enable = Boolean.parseBoolean(CryptomoneyAutotask.config.getConfigString(fullPrefix+"enable"));        
             if(ACTION_WITHDRAW_COIN_TO_COINBASE__enable)
             {
+                UUID _uuid = UUID.randomUUID();
                 CoinCurrencyType coinCurrencyType = CoinCurrencyType.valueOf(CryptomoneyAutotask.config.getConfigString(fullPrefix+"coin_currency_type"));
                 FiatCurrencyType fiatCurrencyType = FiatCurrencyType.valueOf(CryptomoneyAutotask.config.getConfigString(fullPrefix+"fiat_currency_type"));
 
@@ -295,6 +304,7 @@ public class Autotask
                     throw new Exception(fullPrefix+"amountPerDayCurrencyQuantity exceeds hard-coded safe maximum");
                 }
                 RuleAllowance_WithdrawCoinToCoinbase allowanceWithdrawCointoCoinbase = new RuleAllowance_WithdrawCoinToCoinbase(
+                        _uuid,
                         coinCurrencyType,
                         fiatCurrencyType, 
                         executeImmediately, 
@@ -321,6 +331,7 @@ public class Autotask
                 }
 
                 RuleAction_WithdrawCoinToCoinbase action2 = new RuleAction_WithdrawCoinToCoinbase(
+                        _uuid,
                         coinCurrencyType,
                         fiatCurrencyType,                     
                         executeImmediately,
@@ -334,8 +345,184 @@ public class Autotask
                 CryptomoneyAutotask.logProv.LogMessage("rule disabled: " + fullPrefix);
             }
         }
-
+        //</editor-fold>
         
+        //<editor-fold defaultstate="collapsed" desc="ACTION_WITHDRAW_COIN_TO_COINBASE_BELOW_MINIMUM_BALANCE_">
+        //account 1 - ACTION withdraw X coin (from coinbase pro) to coinbase account 
+        for(int i=1;i<=20;i++)
+        {
+            String prefix = "ACTION_WITHDRAW_COIN_TO_COINBASE_BELOW_MINIMUM_BALANCE_";
+            String fullPrefix = prefix+i+"_";
+            
+            if(CryptomoneyAutotask.config.getConfigString(fullPrefix+"enable")==null)
+            {
+                break;
+            }
+            
+            boolean ACTION_WITHDRAW_COIN_TO_COINBASE__enable = Boolean.parseBoolean(CryptomoneyAutotask.config.getConfigString(fullPrefix+"enable"));        
+            if(ACTION_WITHDRAW_COIN_TO_COINBASE__enable)
+            {
+                UUID _uuid = UUID.randomUUID();
+                CoinCurrencyType coinCurrencyType = CoinCurrencyType.valueOf(CryptomoneyAutotask.config.getConfigString(fullPrefix+"coin_currency_type"));
+                FiatCurrencyType fiatCurrencyType = FiatCurrencyType.valueOf(CryptomoneyAutotask.config.getConfigString(fullPrefix+"fiat_currency_type"));
+
+                //check for duplicate rule
+                if(true)
+                {
+                    Rule dupRule = this.rules.getRule(RuleType.ACTION, ActionType.ACTION_WITHDRAW_COIN_TO_COINBASE_BELOW_MINIMUM_DESTINATION_BALANCE, fiatCurrencyType, coinCurrencyType);
+                    if(dupRule != null)
+                    {
+                        throw new Exception("duplicate rule already exists " + dupRule.getHelpString());
+                    }
+                }                
+                
+                //ALLOWANCE RULE            
+                double ACTION_WITHDRAW_COIN_TO_COINBASE__amountPerDayCurrencyQuantity = Double.parseDouble(CryptomoneyAutotask.config.getConfigString(fullPrefix+"amountPerDayCurrencyQuantity"));
+                if(ACTION_WITHDRAW_COIN_TO_COINBASE__amountPerDayCurrencyQuantity < 0 || ACTION_WITHDRAW_COIN_TO_COINBASE__amountPerDayCurrencyQuantity > this.fiatSafetyLimitsQuantity.getLimit(fiatCurrencyType))
+                {
+                    throw new Exception(fullPrefix+"amountPerDayCurrencyQuantity exceeds hard-coded safe maximum");
+                }
+                RuleAllowance_WithdrawCoinToCoinbaseBelowMinimumDestinationBalance allowanceWithdrawCointoCoinbase = new RuleAllowance_WithdrawCoinToCoinbaseBelowMinimumDestinationBalance(
+                        _uuid,
+                        coinCurrencyType,
+                        fiatCurrencyType, 
+                        executeImmediately, 
+                        ACTION_WITHDRAW_COIN_TO_COINBASE__amountPerDayCurrencyQuantity);
+                rules.add(allowanceWithdrawCointoCoinbase);
+
+
+                //ACTION - WITHDRAW RULE
+                double ACTION_WITHDRAW_COIN_TO_COINBASE__maximumAvgOccurrencesPerDay =    Double.parseDouble(CryptomoneyAutotask.config.getConfigString(fullPrefix+"maximumAvgOccurrencesPerDay"));
+                double ACTION_WITHDRAW_COIN_TO_COINBASE__minimumCurrencyQuantityThreshold =     Double.parseDouble(CryptomoneyAutotask.config.getConfigString(fullPrefix+"minimumCurrencyQuantityThreshold"));
+                double ACTION_WITHDRAW_COIN_TO_COINBASE__maximumCurrencyQuantity =     Double.parseDouble(CryptomoneyAutotask.config.getConfigString(fullPrefix+"maximumCurrencyQuantity"));
+                double ACTION_WITHDRAW_COIN_TO_COINBASE__minimumDestinationBalanceValueInFiat =     Double.parseDouble(CryptomoneyAutotask.config.getConfigString(fullPrefix+"minimumDestinationBalanceValueInFiat"));
+
+                if(ACTION_WITHDRAW_COIN_TO_COINBASE__maximumAvgOccurrencesPerDay < 0 || ACTION_WITHDRAW_COIN_TO_COINBASE__maximumAvgOccurrencesPerDay > MAXIMUM_SAFE_NUMBER_OF_EXECUTIONS_PER_DAY)
+                {
+                    throw new Exception(fullPrefix+"maximumAvgOccurrencesPerDay exceeds hard-coded safe maximum");
+                }
+                if(ACTION_WITHDRAW_COIN_TO_COINBASE__minimumCurrencyQuantityThreshold < 0 || ACTION_WITHDRAW_COIN_TO_COINBASE__minimumCurrencyQuantityThreshold > this.fiatSafetyLimitsQuantity.getLimit(fiatCurrencyType))
+                {
+                    throw new Exception(fullPrefix+"minimumCurrencyQuantityThreshold exceeds hard-coded safe maximum");
+                }
+                if(ACTION_WITHDRAW_COIN_TO_COINBASE__maximumCurrencyQuantity < 0 || ACTION_WITHDRAW_COIN_TO_COINBASE__maximumCurrencyQuantity > this.fiatSafetyLimitsQuantity.getLimit(fiatCurrencyType))
+                {
+                    throw new Exception(fullPrefix+"maximumCurrencyQuantity exceeds hard-coded safe maximum");
+                }
+                if(ACTION_WITHDRAW_COIN_TO_COINBASE__minimumDestinationBalanceValueInFiat < 0 || ACTION_WITHDRAW_COIN_TO_COINBASE__minimumDestinationBalanceValueInFiat > 5000)
+                {
+                    throw new Exception(fullPrefix+"minimumDestinationBalanceValueInFiat exceeds hard-coded safe maximum");
+                }
+
+                RuleAction_WithdrawCoinToCoinbaseBelowMinimumDestinationBalance action2 = new RuleAction_WithdrawCoinToCoinbaseBelowMinimumDestinationBalance(
+                        _uuid,
+                        coinCurrencyType,
+                        fiatCurrencyType,                     
+                        executeImmediately,
+                        ACTION_WITHDRAW_COIN_TO_COINBASE__maximumAvgOccurrencesPerDay,
+                        ACTION_WITHDRAW_COIN_TO_COINBASE__minimumCurrencyQuantityThreshold,
+                        ACTION_WITHDRAW_COIN_TO_COINBASE__maximumCurrencyQuantity,
+                        ACTION_WITHDRAW_COIN_TO_COINBASE__minimumDestinationBalanceValueInFiat
+                );
+                rules.add(action2);
+            }
+            else
+            {
+                CryptomoneyAutotask.logProv.LogMessage("rule disabled: " + fullPrefix);
+            }
+        }
+        //</editor-fold>
+        
+        //<editor-fold defaultstate="collapsed" desc="ACTION_WITHDRAW_COIN_TO_CRYPTO_">
+        //account 1 - ACTION withdraw X coin (from coinbase pro) to crypto wallet
+        for(int i=1;i<=20;i++)
+        {
+            String prefix = "ACTION_WITHDRAW_COIN_TO_CRYPTO_";
+            String fullPrefix = prefix+i+"_";
+            
+            if(CryptomoneyAutotask.config.getConfigString(fullPrefix+"enable")==null)
+            {
+                break;
+            }
+            
+            boolean ACTION_WITHDRAW_COIN_TO_CRYPTO__enable = Boolean.parseBoolean(CryptomoneyAutotask.config.getConfigString(fullPrefix+"enable"));        
+            if(ACTION_WITHDRAW_COIN_TO_CRYPTO__enable)
+            {
+                UUID _uuid = UUID.randomUUID();
+                CoinCurrencyType coinCurrencyType = CoinCurrencyType.valueOf(CryptomoneyAutotask.config.getConfigString(fullPrefix+"coin_currency_type"));
+                FiatCurrencyType fiatCurrencyType = FiatCurrencyType.valueOf(CryptomoneyAutotask.config.getConfigString(fullPrefix+"fiat_currency_type"));
+
+                //check for duplicate rule
+                if(true)
+                {
+                    Rule dupRule = this.rules.getRule(RuleType.ACTION, ActionType.ACTION_WITHDRAW_COIN_TO_CRYPTO, fiatCurrencyType, coinCurrencyType);
+                    if(dupRule != null)
+                    {
+                        throw new Exception("duplicate rule already exists " + dupRule.getHelpString());
+                    }
+                }                
+                
+                //ALLOWANCE RULE            
+                double ACTION_WITHDRAW_COIN_TO_CRYPTO__amountPerDayCurrencyQuantity = Double.parseDouble(CryptomoneyAutotask.config.getConfigString(fullPrefix+"amountPerDayCurrencyQuantity"));
+                if(ACTION_WITHDRAW_COIN_TO_CRYPTO__amountPerDayCurrencyQuantity < 0 || ACTION_WITHDRAW_COIN_TO_CRYPTO__amountPerDayCurrencyQuantity > this.fiatSafetyLimitsQuantity.getLimit(fiatCurrencyType))
+                {
+                    throw new Exception(fullPrefix+"amountPerDayCurrencyQuantity exceeds hard-coded safe maximum");
+                }
+                RuleAllowance_WithdrawCoinToCrypto allowanceWithdrawCointoCrypto = new RuleAllowance_WithdrawCoinToCrypto(
+                        _uuid,
+                        coinCurrencyType,
+                        fiatCurrencyType, 
+                        executeImmediately, 
+                        ACTION_WITHDRAW_COIN_TO_CRYPTO__amountPerDayCurrencyQuantity);
+                rules.add(allowanceWithdrawCointoCrypto);
+
+
+                //ACTION - WITHDRAW RULE
+                double ACTION_WITHDRAW_COIN_TO_CRYPTO__maximumAvgOccurrencesPerDay =          Double.parseDouble(CryptomoneyAutotask.config.getConfigString(fullPrefix+"maximumAvgOccurrencesPerDay"));
+                double ACTION_WITHDRAW_COIN_TO_CRYPTO__minimumCurrencyQuantityThreshold =     Double.parseDouble(CryptomoneyAutotask.config.getConfigString(fullPrefix+"minimumCurrencyQuantityThreshold"));
+                double ACTION_WITHDRAW_COIN_TO_CRYPTO__maximumCurrencyQuantity =              Double.parseDouble(CryptomoneyAutotask.config.getConfigString(fullPrefix+"maximumCurrencyQuantity"));
+                double ACTION_WITHDRAW_COIN_TO_CRYPTO__minimumAccountBalanceQuantityInFiat =  Double.parseDouble(CryptomoneyAutotask.config.getConfigString(fullPrefix+"minimumAccountBalanceQuantityInFiat"));
+                String ACTION_WITHDRAW_COIN_TO_CRYPTO__cryptoAccountIDdestination =           CryptomoneyAutotask.config.getConfigString(fullPrefix+"cryptoAccountIDdestination");
+                
+                //TODO: rename all variables like this  to make clear it's measured in fiat quantity
+                
+                
+                if(ACTION_WITHDRAW_COIN_TO_CRYPTO__maximumAvgOccurrencesPerDay < 0 || ACTION_WITHDRAW_COIN_TO_CRYPTO__maximumAvgOccurrencesPerDay > MAXIMUM_SAFE_NUMBER_OF_EXECUTIONS_PER_DAY)
+                {
+                    throw new Exception(fullPrefix+"maximumAvgOccurrencesPerDay exceeds hard-coded safe maximum");
+                }
+                if(ACTION_WITHDRAW_COIN_TO_CRYPTO__minimumCurrencyQuantityThreshold < 0 || ACTION_WITHDRAW_COIN_TO_CRYPTO__minimumCurrencyQuantityThreshold > this.fiatSafetyLimitsQuantity.getLimit(fiatCurrencyType))
+                {
+                    throw new Exception(fullPrefix+"minimumCurrencyQuantityThreshold exceeds hard-coded safe maximum");
+                }
+                if(ACTION_WITHDRAW_COIN_TO_CRYPTO__maximumCurrencyQuantity < 0 || ACTION_WITHDRAW_COIN_TO_CRYPTO__maximumCurrencyQuantity > this.fiatSafetyLimitsQuantity.getLimit(fiatCurrencyType))
+                {
+                    throw new Exception(fullPrefix+"maximumCurrencyQuantity exceeds hard-coded safe maximum");
+                }
+
+                RuleAction_WithdrawCoinToCrypto action2 = new RuleAction_WithdrawCoinToCrypto(
+                        _uuid,
+                        coinCurrencyType,
+                        fiatCurrencyType,                     
+                        executeImmediately,
+                        ACTION_WITHDRAW_COIN_TO_CRYPTO__maximumAvgOccurrencesPerDay,
+                        ACTION_WITHDRAW_COIN_TO_CRYPTO__minimumCurrencyQuantityThreshold,
+                        ACTION_WITHDRAW_COIN_TO_CRYPTO__maximumCurrencyQuantity,
+                        ACTION_WITHDRAW_COIN_TO_CRYPTO__minimumAccountBalanceQuantityInFiat,
+                        ACTION_WITHDRAW_COIN_TO_CRYPTO__cryptoAccountIDdestination
+                );
+                
+                rules.add(action2);
+            }
+            else
+            {
+                CryptomoneyAutotask.logProv.LogMessage("rule disabled: " + fullPrefix);
+            }
+        }
+        //</editor-fold>
+
+                
+        //<editor-fold defaultstate="collapsed" desc="ACTION_DEPOSIT_FIAT_">
         //account 1 - ACTION transfer X USD from bank 1
         for(int i=1;i<=20;i++)
         {        
@@ -350,7 +537,7 @@ public class Autotask
             boolean ACTION_DEPOSIT_FIAT__enable = Boolean.parseBoolean(CryptomoneyAutotask.config.getConfigString(fullPrefix+"enable"));        
             if(ACTION_DEPOSIT_FIAT__enable)
             {
-
+                UUID _uuid = UUID.randomUUID();
                 FiatCurrencyType fiatCurrencyType = FiatCurrencyType.valueOf(CryptomoneyAutotask.config.getConfigString(fullPrefix+"fiat_currency_type"));
 
                 /*  Allow duplicates for this rule
@@ -371,6 +558,7 @@ public class Autotask
                     throw new Exception(fullPrefix+"amountPerDayCurrencyQuantity exceeds hard-coded safe maximum");
                 }
                 RuleAllowance_DepositFiat allowanceDepositFiat = new RuleAllowance_DepositFiat(
+                        _uuid,
                         fiatCurrencyType,
                         executeImmediately, 
                         ACTION_DEPOSIT_FIAT__amountPerDayCurrencyQuantity);
@@ -396,6 +584,7 @@ public class Autotask
                 }
 
                 RuleAction_DepositFiat action3 = new RuleAction_DepositFiat(
+                        _uuid,
                         fiatCurrencyType,
                         executeImmediately,
                         ACTION_DEPOSIT_FIAT__maximumAvgOccurrencesPerDay, 
@@ -408,7 +597,10 @@ public class Autotask
                 CryptomoneyAutotask.logProv.LogMessage("rule disabled: " + fullPrefix);
             }            
         }
-        
+        //</editor-fold>
+
+        //ALARM ADDITIONAL
+        //<editor-fold defaultstate="collapsed" desc="ALARM ADDITIONAL">
         //Additional coinbase wallets to include in alarm print
         for(int i=1;i<=20;i++)
         {        
@@ -484,6 +676,7 @@ public class Autotask
                 CryptomoneyAutotask.logProv.LogMessage("rule disabled: " + fullPrefix);
             }              
         }        
+        //</editor-fold>
     }
     
     

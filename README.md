@@ -41,7 +41,7 @@ The available tasks are:
 3) ACTION_DEPOSIT_FIAT_* - deposit fiat currency from a bank account to CoinbasePro
 4) ALARM_PRINT_BALANCE_* - prints relevant account balance
 5) ALARM_PRINT_BALANCE_INCLUDE_* - include specific not relevant account balances in the account balance output
-
+6) ALLOWANCE ALLOWANCE_WITHDRAW_COIN_TO_CRYPTO_* - withdraws a type of cryptocurrency to a specified crypto wallet, given a minimum balance in coinbasePro of that cryptocurrency
 
 
  

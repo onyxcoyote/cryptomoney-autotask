@@ -21,12 +21,15 @@ import cryptomoney.autotask.CryptomoneyAutotask;
 import cryptomoney.autotask.currency.CoinCurrencyType;
 import cryptomoney.autotask.currency.FiatCurrencyType;
 
+import java.util.UUID;
+
 /**
  *
  * @author onyxcoyote <no-reply@onyxcoyote.com>
  */
 public abstract class Rule
 {
+    UUID uuid;
     ExchangeAccount account;
     private ActionType actionType;
     private RuleType ruleType;
@@ -38,15 +41,20 @@ public abstract class Rule
         
     }
     
-    public Rule(RuleType _ruleType, ActionType _actionType)
+    public Rule(UUID _uuid, RuleType _ruleType, ActionType _actionType)
     {
-        
+        uuid = _uuid;
         account = CryptomoneyAutotask.app.account1; //there is only one of these... TODO
         ruleType = _ruleType;
         actionType = _actionType;
         //System.out.println("TEMP constructor: " + actionType.toString());
     }
 
+    public UUID getUUID()
+    {
+        return uuid;
+    }
+    
     /**
      * @return the ruleType
      */

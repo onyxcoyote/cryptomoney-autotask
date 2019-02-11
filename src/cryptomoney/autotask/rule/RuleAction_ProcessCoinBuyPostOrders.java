@@ -22,6 +22,8 @@ import cryptomoney.autotask.CryptomoneyAutotask;
 import cryptomoney.autotask.currency.CoinCurrencyType;
 import cryptomoney.autotask.currency.FiatCurrencyType;
 import cryptomoney.autotask.functions.SharedFunctions;
+
+import java.util.UUID;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 
@@ -40,16 +42,16 @@ public class RuleAction_ProcessCoinBuyPostOrders extends Rule
     
     public RuleAction_ProcessCoinBuyPostOrders()
     {
-        super(RuleType.ACTION, ActionType.ACTION_PROCESS_COIN_BUY_POST_ORDERS);
+        super(null, RuleType.ACTION, ActionType.ACTION_PROCESS_COIN_BUY_POST_ORDERS);
     }
     
     /**
      * 
      * @param _maximumAvgOccurrencesPerDay
      */
-    public RuleAction_ProcessCoinBuyPostOrders(CoinCurrencyType _coinCurrencyType, FiatCurrencyType _fiatCurrencyType, boolean _executeImmediately, double _maximumAvgOccurrencesPerDay)
+    public RuleAction_ProcessCoinBuyPostOrders(UUID _uuid, CoinCurrencyType _coinCurrencyType, FiatCurrencyType _fiatCurrencyType, boolean _executeImmediately, double _maximumAvgOccurrencesPerDay)
     {
-        super(RuleType.ACTION, ActionType.ACTION_PROCESS_COIN_BUY_POST_ORDERS);
+        super(_uuid, RuleType.ACTION, ActionType.ACTION_PROCESS_COIN_BUY_POST_ORDERS);
         coinCurrencyType = _coinCurrencyType;
         fiatCurrencyType = _fiatCurrencyType;
         maximumAvgOccurrencesPerDay = _maximumAvgOccurrencesPerDay;
@@ -100,7 +102,7 @@ public class RuleAction_ProcessCoinBuyPostOrders extends Rule
             
         }
         
-        this.account.ProcessBuyOrders(this.coinCurrencyType, this.fiatCurrencyType, false);
+        this.account.ProcessBuyOrders(this.uuid, this.coinCurrencyType, this.fiatCurrencyType, false);
         
         CryptomoneyAutotask.logProv.LogMessage("");
     }
